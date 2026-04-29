@@ -940,7 +940,7 @@
 
         // ─── State ───────────────────────────────────────────────────────────────
         let sid = null;
-        let ttlSecs = 600; // seconds, set at session creation
+        let ttlSecs = 600;
         let busy = false;
         let msgCount = 0;
 
@@ -976,12 +976,12 @@
             const div = document.createElement("div");
             div.className = "msg";
             div.innerHTML = `
-            <div class="msg-header">
-                <span class="msg-role ${role}">${roleLabels[role] || role.toUpperCase()}</span>
-                <span class="msg-time">${timestamp()}</span>
-            </div>
-            <pre class="msg-body ${role === "user" ? "user-body" : role === "sys" ? "sys-body" : ""} ${cls}">${escapeHtml(body)}</pre>
-        `;
+    <div class="msg-header">
+        <span class="msg-role ${role}">${roleLabels[role] || role.toUpperCase()}</span>
+        <span class="msg-time">${timestamp()}</span>
+    </div>
+    <pre class="msg-body ${role === "user" ? "user-body" : role === "sys" ? "sys-body" : ""} ${cls}">${escapeHtml(body)}</pre>
+`;
             outputArea.appendChild(div);
             outputArea.scrollTop = outputArea.scrollHeight;
             msgCount++;
@@ -1054,8 +1054,9 @@
             setStatus("thinking", "connecting");
 
             try {
+                // FIXED: Removed backend Node.js code injected into client bundle
                 const body = { ttl: ttlSecs };
-                const clientSid = req.body?.sid ?? req.query?.sid;
+                if (customSid) body.sid = customSid;
 
                 const res = await fetch("/api/session/create", {
                     method: "POST",
@@ -1064,7 +1065,6 @@
                 });
 
                 let data;
-
                 try {
                     data = await res.json();
                 } catch {
@@ -1079,7 +1079,6 @@
                     return;
                 }
 
-                // CRITICAL FIX: Use the SID returned by the server, not the user input value
                 sid = data.sid;
 
                 sidDisplay.textContent = sid;
@@ -1096,7 +1095,6 @@
                 showInitError(e.message || "Network error.");
                 setStatus("error", "error");
             } finally {
-                // CRITICAL FIX: always re-enable button, even on error
                 createBtn.disabled = false;
                 createLabel.textContent = "Initialize Session →";
                 busy = false;
@@ -1173,15 +1171,12 @@
         endBtn.addEventListener("click", async () => {
             if (!sid) return;
 
-            // CRITICAL FIX: actually call the backend to delete the Redis session
             try {
                 await fetch("/api/session/delete", {
                     method: "POST",
                     headers: { "x-session-id": sid },
                 });
-            } catch (_) {
-                // Best-effort — reset UI regardless
-            }
+            } catch (_) { }
 
             appendSys("Session ended by user.");
             setTimeout(resetToInit, 600);
@@ -1198,7 +1193,6 @@
             clearInitError();
             setStatus("", "idle");
         }
-
     </script>
 
 </body>

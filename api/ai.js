@@ -54,7 +54,6 @@ function normalizePrompt(p) {
 
 function sanitizeOutput(text) {
     let out = text;
-    // Strip terminal escape sequences to prevent injection
     /* eslint-disable no-control-regex */
     out = out.replace(/\x1B\][\s\S]*?(?:\x07|\x1B\\)/g, "");
     out = out.replace(/\x1B[PX^_][\s\S]*?\x1B\\/g, "");
@@ -67,15 +66,9 @@ function sanitizeOutput(text) {
 
 function stripMarkdown(text) {
     let out = text;
-    // Strip code fences only — do NOT touch **, *, _, or backtick inline code.
-    // Reason: ** is Python/JS exponentiation, backticks appear in shell commands.
-    // The system prompt instructs the model not to use these; we only clean fences
-    // as a safety net for code blocks.
     out = out.replace(/^```[a-zA-Z0-9_+\-.]*\s*\n?([\s\S]*?)\n?^```/gm, (_, body) => body.trimEnd());
     out = out.replace(/^```[a-zA-Z0-9_+\-.]*\s*$/gm, "");
-    // Strip markdown headings
     out = out.replace(/^#{1,6}\s+/gm, "");
-    // Collapse excessive blank lines
     out = out.replace(/\n{3,}/g, "\n\n");
     return out;
 }
@@ -117,46 +110,48 @@ export default async function handler(req, res) {
         return res.status(405).send("Method not allowed\n");
     }
 
-    // Bare GET → usage
     if (req.method === "GET" && (!req.query?.q || req.query.q === "")) {
         return res.send(USAGE_TEXT);
     }
 
-    // Rate limit
     const ip = getIp(req);
-    const rl = await rateLimit(ip);
+    const rawSid = extractSid(req);
+    const sidCheck = validateSid(rawSid);
+
+    if (!sidCheck.valid) {
+        return res.status(400).send(sidCheck.error);
+    }
+    const sid = rawSid;
+
+    // FIXED: Parallel execution of Redis operations to reduce latency
+    let rl, sessionResult;
+    try {
+        [rl, sessionResult] = await Promise.all([
+            rateLimit(ip),
+            loadSession(sid).catch(e => ({ error: e }))
+        ]);
+    } catch (e) {
+        return res.status(503).send("Storage unavailable. Please try again shortly.\n");
+    }
+
     res.setHeader("X-RateLimit-Remaining", String(rl.remaining));
     if (!rl.allowed) {
         res.setHeader("Retry-After", String(rl.retryAfter || 60));
         return res.status(429).send(`Rate limit exceeded. Retry in ${rl.retryAfter || 60}s.\n`);
     }
 
-    // Extract and validate SID
-    const rawSid = extractSid(req);
-    const sidCheck = validateSid(rawSid);
-    if (!sidCheck.valid) {
-        return res.status(400).send(sidCheck.error);
-    }
-    const sid = rawSid;
-
-    // Load session — single Redis read, propagates infrastructure errors as 503
-    let session;
-    try {
-        session = await loadSession(sid);
-    } catch (e) {
-        console.error("session_load_error", e?.message);
+    if (sessionResult.error) {
+        console.error("session_load_error", sessionResult.error?.message);
         return res.status(503).send("Storage unavailable. Please try again shortly.\n");
     }
 
+    const session = sessionResult;
     if (!session.found) {
-        return res
-            .status(404)
-            .send("Session not found or expired. Create one at POST /api/session/create\n");
+        return res.status(404).send("Session not found or expired. Create one at POST /api/session/create\n");
     }
 
     const { history, ttl } = session;
 
-    // Extract prompt
     const rawPrompt = req.method === "GET" ? req.query?.q : req.body?.prompt;
     if (typeof rawPrompt !== "string" || rawPrompt.trim().length === 0) {
         return res.status(400).send("Invalid prompt\n");
@@ -167,7 +162,6 @@ export default async function handler(req, res) {
 
     const normalized = normalizePrompt(rawPrompt);
 
-    // Quit command — delete session and exit
     if (QUIT_COMMANDS.has(normalized.toLowerCase())) {
         await deleteSession(sid);
         return res.send("Session ended.\n");
@@ -175,16 +169,11 @@ export default async function handler(req, res) {
 
     const intent = detectIntent(normalized);
 
-    // Code intent without language — check history for a prior clarifier exchange.
-    // FIX: the current user answer is in `normalized`, not in history[i+1].
     if (intent.kind === "code" && !intent.language) {
         let priorLanguage = null;
-
         for (let i = history.length - 1; i >= 0; i--) {
             const m = history[i];
             if (m.role === "assistant" && /which programming language/i.test(m.content)) {
-                // The user's answer to this clarifier is the CURRENT normalized prompt.
-                // history[i+1] would be undefined here because the current turn hasn't been saved yet.
                 priorLanguage = detectLanguage(normalized);
                 break;
             }
@@ -204,18 +193,18 @@ export default async function handler(req, res) {
             }
             return res.send(clarifier + "\n");
         }
-
         intent.language = priorLanguage;
     }
 
     const messages = [...history, { role: "user", content: normalized }];
 
-    // Cache only for first-turn (no prior history) — keyed by model, intent, and prompt hash
+    // FIXED: Stripped punctuation and spacing from cache hash for dramatically improved cache hits
     let cacheKey = null;
     let cached = null;
     if (history.length === 0) {
         const cacheTag = `${intent.kind}:${intent.language || "-"}`;
-        cacheKey = `ai:v1:${MODEL_VERSION}:${cacheTag}:${hash(normalized)}`;
+        const normalizedForCache = normalized.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+        cacheKey = `ai:v1:${MODEL_VERSION}:${cacheTag}:${hash(normalizedForCache)}`;
         cached = await safeCacheGet(cacheKey);
     }
 
@@ -223,10 +212,8 @@ export default async function handler(req, res) {
         const updatedHistory = [...messages, { role: "assistant", content: cached }];
         try {
             await saveHistory(sid, updatedHistory, ttl);
-        } catch (e) {
-            console.error("session_save_error", e?.message);
-        }
-        return res.send(cached + "\n");
+        } catch (e) { }
+        return res.send(cached + "\n\n");
     }
 
     const systemPrompt = systemPromptFor(intent);
@@ -238,9 +225,7 @@ export default async function handler(req, res) {
         }
         const upstream = result.status;
         if (upstream === 429) return res.status(429).send("Upstream rate limit hit. Try again shortly.\n");
-        if (upstream === 401 || upstream === 403) {
-            return res.status(502).send("Service misconfigured. Please contact the operator.\n");
-        }
+        if (upstream === 401 || upstream === 403) return res.status(502).send("Service misconfigured. Please contact the operator.\n");
         return res.status(502).send("All providers failed. Please try again.\n");
     }
 
@@ -254,12 +239,12 @@ export default async function handler(req, res) {
         await saveHistory(sid, updatedHistory, ttl);
     } catch (e) {
         console.error("session_save_error", e?.message);
-        // Don't fail the request — the response is already generated
     }
 
     if (cacheKey && clean.length <= CACHE_MAX_VALUE_LENGTH) {
         await safeCacheSet(cacheKey, clean);
     }
 
-    return res.send(clean + "\n");
+    // FIXED: Added an extra newline to ensure the user's terminal prompt never prints on the same line
+    return res.send(clean + "\n\n");
 }
