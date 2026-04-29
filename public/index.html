@@ -21,7 +21,7 @@
 
         .box {
             width: 100%;
-            max-width: 720px;
+            max-width: 760px;
             padding: 24px;
             border: 1px solid #00ff9c;
             border-radius: 10px;
@@ -71,13 +71,16 @@
         <p>Type a prompt and press Enter:</p>
         <input id="input" placeholder="Ask something..." autocomplete="off" autofocus />
         <pre id="output"></pre>
-        <p class="muted">Also accessible via curl / PowerShell. See <code>/api/ai</code>.</p>
+        <p class="muted">Also accessible via curl. See <code>/api/ai</code>.</p>
     </div>
     <script>
         const input = document.getElementById("input");
         const output = document.getElementById("output");
+        let inFlight = false;
 
         async function ask(prompt) {
+            if (inFlight) return;
+            inFlight = true;
             output.textContent = "Thinking...";
             try {
                 const res = await fetch("/api/ai", {
@@ -86,18 +89,17 @@
                     body: JSON.stringify({ prompt })
                 });
                 const text = await res.text();
-                if (!res.ok) {
-                    output.textContent = "Error " + res.status + ": " + text;
-                    return;
-                }
-                output.textContent = text;
+                output.textContent = res.ok ? text : ("Error " + res.status + ": " + text);
             } catch (e) {
                 output.textContent = "Network error: " + e.message;
+            } finally {
+                inFlight = false;
             }
         }
 
-        input.addEventListener("keypress", (e) => {
+        input.addEventListener("keydown", (e) => {
             if (e.key === "Enter") {
+                e.preventDefault();
                 const q = input.value.trim();
                 if (q) ask(q);
             }
