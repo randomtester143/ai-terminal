@@ -1,0 +1,9 @@
+{
+    "name": "ai-terminal",
+    "version": "1.0.0",
+    "type": "module",
+    "private": true,
+    "dependencies": {
+        "@upstash/redis": "^1.37.0"
+    }
+}
