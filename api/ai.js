@@ -6,39 +6,47 @@ import { detectIntent, systemPromptFor } from "../lib/intent.js";
 import {
     validateSid,
     validateTtl,
+    extractSid,
     loadHistory,
     saveHistory,
+    deleteSession,
+    sessionExists,
 } from "../lib/session.js";
 
 const MAX_PROMPT_LENGTH = 4000;
 const CACHE_TTL_SECONDS = 1800;
 const CACHE_MAX_VALUE_LENGTH = 4000;
+const QUIT_COMMANDS = new Set(["quit", "exit", "end", "bye", "/quit", "/exit"]);
 
 const USAGE_TEXT = [
     "Secure Terminal AI",
     "",
-    "Usage:",
-    "  curl \"$HOST/api/ai?q=your+prompt&sid=your_key\"",
-    "  curl -X POST $HOST/api/ai \\",
-    "       -H 'Content-Type: application/json' \\",
-    "       -d '{\"prompt\":\"explain recursion\",\"sid\":\"mychat\"}'",
+    "Quick start:",
+    "  1. Create a session:",
+    "     curl -X POST $HOST/api/session/create",
+    "     → { \"sid\": \"abc123\", \"ttl\": 3600 }",
     "",
-    "Session:",
-    "  sid   required. 4-20 alphanumeric characters. Identifies your session.",
-    "  ttl   optional. Session lifetime in seconds (300-7200, default 3600).",
+    "  2. Chat using the session header:",
+    "     curl -X POST $HOST/api/ai \\",
+    "          -H 'x-session-id: abc123' \\",
+    "          -H 'Content-Type: application/json' \\",
+    "          -d '{\"prompt\":\"explain recursion\"}'",
     "",
-    "Examples:",
-    "  curl \"$HOST/api/ai?q=write+binary+search&sid=mychat\"",
-    "  curl \"$HOST/api/ai?q=python&sid=mychat\"",
+    "  3. Or use query param:",
+    "     curl \"$HOST/api/ai?q=explain+recursion&sid=abc123\"",
     "",
-    "PowerShell:",
-    "  irm \"$HOST/api/ai?q=what+is+ai&sid=mysession\"",
+    "  4. End session:",
+    "     Send prompt: quit",
+    "",
+    "Options:",
+    "  sid   Session key. Provide via x-session-id header, ?sid= param, or body.",
+    "  ttl   Session lifetime in seconds (300-7200, default 3600).",
     "",
     "Behavior:",
     "  - Code requests without a language return a clarifier.",
     "  - Code requests with a language return clean code only.",
     "  - Explanations and commands return plain prose, no markdown.",
-    "  - Conversation history is preserved per session key.",
+    "  - Conversation history is preserved per session.",
     "",
 ].join("\n");
 
@@ -111,11 +119,8 @@ export default async function handler(req, res) {
         return res.status(405).send("Method not allowed\n");
     }
 
-    // Usage text for bare GET
-    if (
-        req.method === "GET" &&
-        (req.query?.q === undefined || req.query?.q === "")
-    ) {
+    // Bare GET → usage
+    if (req.method === "GET" && (req.query?.q === undefined || req.query?.q === "")) {
         return res.send(USAGE_TEXT);
     }
 
@@ -125,20 +130,11 @@ export default async function handler(req, res) {
     res.setHeader("X-RateLimit-Remaining", String(rl.remaining));
     if (!rl.allowed) {
         res.setHeader("Retry-After", String(rl.retryAfter || 60));
-        return res
-            .status(429)
-            .send(`Rate limit exceeded. Retry in ${rl.retryAfter || 60}s.\n`);
+        return res.status(429).send(`Rate limit exceeded. Retry in ${rl.retryAfter || 60}s.\n`);
     }
 
-    // Extract fields from GET or POST
-    const rawPrompt =
-        req.method === "GET" ? req.query?.q : req.body?.prompt;
-    const rawSid =
-        req.method === "GET" ? req.query?.sid : req.body?.sid;
-    const rawTtl =
-        req.method === "GET" ? req.query?.ttl : req.body?.ttl;
-
-    // Validate sid (mandatory)
+    // Extract sid: header → query → body
+    const rawSid = extractSid(req);
     const sidCheck = validateSid(rawSid);
     if (!sidCheck.valid) {
         return res.status(400).send(sidCheck.error);
@@ -146,37 +142,47 @@ export default async function handler(req, res) {
     const sid = rawSid;
 
     // Validate ttl
+    const rawTtl = req.method === "GET" ? req.query?.ttl : (req.body?.ttl ?? req.query?.ttl);
     const ttlCheck = validateTtl(rawTtl);
     if (!ttlCheck.valid) {
         return res.status(400).send(ttlCheck.error);
     }
     const ttl = ttlCheck.ttl;
 
-    // Validate prompt
+    // Verify session exists in Redis
+    const exists = await sessionExists(sid);
+    if (!exists) {
+        return res
+            .status(404)
+            .send("Session not found or expired. Create one at POST /api/session/create\n");
+    }
+
+    // Extract prompt
+    const rawPrompt = req.method === "GET" ? req.query?.q : req.body?.prompt;
     if (typeof rawPrompt !== "string" || rawPrompt.trim().length === 0) {
         return res.status(400).send("Invalid prompt\n");
     }
     if (rawPrompt.length > MAX_PROMPT_LENGTH) {
-        return res
-            .status(413)
-            .send(`Prompt too long (max ${MAX_PROMPT_LENGTH} chars)\n`);
+        return res.status(413).send(`Prompt too long (max ${MAX_PROMPT_LENGTH} chars)\n`);
     }
 
     const normalized = normalizePrompt(rawPrompt);
-    const intent = detectIntent(normalized);
 
-    // Load session history
+    // Quit command
+    if (QUIT_COMMANDS.has(normalized.toLowerCase())) {
+        await deleteSession(sid);
+        return res.send("Session ended.\n");
+    }
+
+    const intent = detectIntent(normalized);
     const history = await loadHistory(sid);
 
-    // Smart code flow: if intent is code and no language, check history for
-    // a prior language mention before returning the clarifier.
+    // Code intent without language: check history for prior language
     if (intent.kind === "code" && !intent.language) {
-        // Look through history for a language the user already named
         let priorLanguage = null;
         for (let i = history.length - 1; i >= 0; i--) {
             const m = history[i];
             if (m.role === "assistant" && /which programming language/i.test(m.content)) {
-                // The assistant already asked — check what the user replied next
                 if (history[i + 1]?.role === "user") {
                     const { detectLanguage } = await import("../lib/intent.js");
                     priorLanguage = detectLanguage(history[i + 1].content);
@@ -186,7 +192,6 @@ export default async function handler(req, res) {
         }
 
         if (!priorLanguage) {
-            // Store the clarifier exchange in session so next turn has context
             const clarifier = clarifierForCode();
             const updatedHistory = [
                 ...history,
@@ -197,18 +202,12 @@ export default async function handler(req, res) {
             return res.send(clarifier + "\n");
         }
 
-        // Reconstruct intent with recovered language so the prompt is complete
         intent.language = priorLanguage;
     }
 
-    // For non-code or code-with-language: build full message list for provider
-    const messages = [
-        ...history,
-        { role: "user", content: normalized },
-    ];
+    const messages = [...history, { role: "user", content: normalized }];
 
-    // Cache only applies to stateless (no prior history) requests to avoid
-    // serving one user's session context to another.
+    // Cache only applies to first-turn (no prior history) requests
     let cacheKey = null;
     let cached = null;
     if (history.length === 0) {
@@ -218,11 +217,7 @@ export default async function handler(req, res) {
     }
 
     if (typeof cached === "string" && cached.length > 0) {
-        // Still save to session so the conversation is coherent on next turn
-        const updatedHistory = [
-            ...messages,
-            { role: "assistant", content: cached },
-        ];
+        const updatedHistory = [...messages, { role: "assistant", content: cached }];
         await saveHistory(sid, updatedHistory, ttl);
         return res.send(cached + "\n");
     }
@@ -232,13 +227,9 @@ export default async function handler(req, res) {
 
     if (!result.ok) {
         const upstream = result.status;
-        if (upstream === 429) {
-            return res.status(429).send("Upstream rate limit. Try again shortly.\n");
-        }
+        if (upstream === 429) return res.status(429).send("Upstream rate limit. Try again shortly.\n");
         if (upstream === 401 || upstream === 403) {
-            return res
-                .status(502)
-                .send("Service misconfigured. Please contact the operator.\n");
+            return res.status(502).send("Service misconfigured. Please contact the operator.\n");
         }
         return res.status(502).send("All providers failed. Please try again.\n");
     }
@@ -248,14 +239,9 @@ export default async function handler(req, res) {
         return res.status(502).send("Empty response from providers.\n");
     }
 
-    // Persist updated history
-    const updatedHistory = [
-        ...messages,
-        { role: "assistant", content: clean },
-    ];
+    const updatedHistory = [...messages, { role: "assistant", content: clean }];
     await saveHistory(sid, updatedHistory, ttl);
 
-    // Cache only first-turn (no prior history) responses
     if (cacheKey && clean.length <= CACHE_MAX_VALUE_LENGTH) {
         await safeCacheSet(cacheKey, clean);
     }

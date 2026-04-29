@@ -6,6 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Secure Terminal AI</title>
     <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
             background: #0f0f0f;
@@ -16,7 +22,6 @@
             justify-content: center;
             min-height: 100vh;
             padding: 20px;
-            box-sizing: border-box;
         }
 
         .box {
@@ -30,27 +35,28 @@
         }
 
         h2 {
-            margin-top: 0;
+            margin: 0 0 20px;
+            font-size: 18px;
+            letter-spacing: 0.04em;
         }
 
-        .row {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .field {
+        /* ── No-session screen ── */
+        #screen-init {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 16px;
         }
 
-        .field.grow {
-            flex: 1;
+        .ttl-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
 
-        .field.fixed {
-            width: 110px;
+        .ttl-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         label {
@@ -60,9 +66,156 @@
             letter-spacing: 0.05em;
         }
 
-        input {
+        #ttl-display {
+            font-size: 13px;
+            color: #00ff9c;
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
             width: 100%;
-            padding: 10px;
+            height: 4px;
+            background: #1a3a2a;
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #00ff9c;
+            cursor: pointer;
+            transition: box-shadow 0.15s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            box-shadow: 0 0 8px #00ff9c;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border: none;
+            border-radius: 50%;
+            background: #00ff9c;
+            cursor: pointer;
+        }
+
+        .btn {
+            padding: 10px 18px;
+            background: transparent;
+            color: #00ff9c;
+            border: 1px solid #00ff9c;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.15s, box-shadow 0.15s;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            background: rgba(0, 255, 156, 0.08);
+            box-shadow: 0 0 8px rgba(0, 255, 156, 0.3);
+        }
+
+        .btn:active {
+            background: rgba(0, 255, 156, 0.15);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: rgba(0, 255, 156, 0.1);
+            font-weight: bold;
+        }
+
+        .btn-danger {
+            border-color: #ff4444;
+            color: #ff4444;
+        }
+
+        .btn-danger:hover {
+            background: rgba(255, 68, 68, 0.08);
+            box-shadow: 0 0 8px rgba(255, 68, 68, 0.3);
+        }
+
+        /* ── Active session screen ── */
+        #screen-chat {
+            display: none;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .session-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: #0a1a0f;
+            border: 1px solid #1a3a2a;
+            border-radius: 6px;
+            gap: 10px;
+        }
+
+        .session-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .session-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00ff9c;
+            flex-shrink: 0;
+            box-shadow: 0 0 6px #00ff9c;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        .session-label {
+            font-size: 12px;
+            color: #5a8a72;
+        }
+
+        .session-id {
+            font-size: 14px;
+            color: #00ff9c;
+            letter-spacing: 0.08em;
+        }
+
+        .prompt-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 10px 12px;
             background: #000;
             color: #00ff9c;
             border: 1px solid #00ff9c;
@@ -70,44 +223,53 @@
             outline: none;
             font-family: inherit;
             font-size: 14px;
-            box-sizing: border-box;
         }
 
-        input:focus {
+        input[type="text"]:focus {
             box-shadow: 0 0 8px #00ff9c;
         }
 
-        input.error {
-            border-color: #ff4444;
-            box-shadow: 0 0 6px #ff4444;
-        }
-
-        input::placeholder {
+        input[type="text"]::placeholder {
             color: #2a5a40;
         }
 
-        .divider {
-            border: none;
-            border-top: 1px solid #1a3a2a;
-            margin: 16px 0 6px;
+        .send-btn {
+            padding: 10px 16px;
+            font-size: 18px;
+            line-height: 1;
         }
 
-        pre {
-            margin-top: 12px;
+        #output {
+            margin: 0;
+            padding: 12px;
+            background: #0a0a0a;
+            border: 1px solid #1a3a2a;
+            border-radius: 6px;
             white-space: pre-wrap;
             word-break: break-word;
-            min-height: 60px;
+            min-height: 80px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .muted {
+            font-size: 11px;
+            color: #2a5a40;
+            margin: 0;
         }
 
         .err {
             color: #ff4444;
         }
 
-        .muted {
+        .dim {
             color: #5a8a72;
-            font-size: 12px;
-            margin-top: 12px;
-            margin-bottom: 0;
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid #1a3a2a;
+            margin: 4px 0;
         }
     </style>
 </head>
@@ -116,131 +278,224 @@
     <div class="box">
         <h2>Secure Terminal AI</h2>
 
-        <div class="row">
-            <div class="field grow">
-                <label for="sid">Session Key <span style="color:#ff4444">*</span></label>
-                <input id="sid" placeholder="4-20 alphanumeric chars" maxlength="20" autocomplete="off"
-                    spellcheck="false" />
+        <!-- ── No session ── -->
+        <div id="screen-init">
+            <div class="ttl-row">
+                <div class="ttl-header">
+                    <label>Session duration</label>
+                    <span id="ttl-display">1 hr</span>
+                </div>
+                <input type="range" id="ttl-slider" min="5" max="120" step="10" value="60" />
             </div>
-            <div class="field fixed">
-                <label for="ttl">TTL (seconds)</label>
-                <input id="ttl" type="number" placeholder="3600" min="300" max="7200" />
-            </div>
+
+            <button class="btn btn-primary" id="btn-create">Create Session</button>
+
+            <p class="muted">
+                Terminal: <code>curl -X POST /api/session/create</code> then use
+                <code>-H "x-session-id: &lt;sid&gt;"</code>
+            </p>
         </div>
 
-        <hr class="divider" />
+        <!-- ── Active chat ── -->
+        <div id="screen-chat">
+            <div class="session-bar">
+                <div class="session-info">
+                    <div class="session-dot"></div>
+                    <span class="session-label">Session</span>
+                    <span class="session-id" id="display-sid">—</span>
+                </div>
+                <button class="btn btn-danger" id="btn-end">End Session</button>
+            </div>
 
-        <div class="field" style="margin-top:4px">
-            <label for="prompt">Prompt</label>
-            <input id="prompt" placeholder="Ask something..." autocomplete="off" autofocus />
+            <div class="prompt-row">
+                <input type="text" id="prompt" placeholder="Ask something…" autocomplete="off" spellcheck="false"
+                    autofocus />
+                <button class="btn send-btn" id="btn-send" title="Send">→</button>
+            </div>
+
+            <pre id="output"><span class="dim">Waiting for input…</span></pre>
+
+            <p class="muted">Type <code>quit</code> to end session.</p>
         </div>
-
-        <pre id="output"></pre>
-        <p class="muted">Also accessible via curl. See <code>/api/ai</code>.</p>
     </div>
 
     <script>
-        const sidInput = document.getElementById("sid");
-        const ttlInput = document.getElementById("ttl");
+        const LS_SID_KEY = "terminal_ai_sid";
+
+        // ── Elements ──
+        const screenInit = document.getElementById("screen-init");
+        const screenChat = document.getElementById("screen-chat");
+        const ttlSlider = document.getElementById("ttl-slider");
+        const ttlDisplay = document.getElementById("ttl-display");
+        const btnCreate = document.getElementById("btn-create");
+        const btnEnd = document.getElementById("btn-end");
+        const btnSend = document.getElementById("btn-send");
         const promptInput = document.getElementById("prompt");
+        const displaySid = document.getElementById("display-sid");
         const output = document.getElementById("output");
 
-        const SID_RE = /^[a-zA-Z0-9]{4,20}$/;
-        const LS_KEY = "terminal_ai_sid";
-
-        // Restore sid from localStorage
-        const saved = localStorage.getItem(LS_KEY);
-        if (saved) sidInput.value = saved;
-
-        // Persist sid to localStorage whenever it changes
-        sidInput.addEventListener("input", () => {
-            sidInput.classList.remove("error");
-            const v = sidInput.value.trim();
-            if (SID_RE.test(v)) localStorage.setItem(LS_KEY, v);
-        });
-
-        ttlInput.addEventListener("input", () => ttlInput.classList.remove("error"));
-
+        // ── State ──
+        let activeSid = null;
         let inFlight = false;
 
-        async function ask(prompt) {
-            if (inFlight) return;
-
-            const sid = sidInput.value.trim();
-            const ttlRaw = ttlInput.value.trim();
-
-            // Validate sid
-            if (!sid) {
-                sidInput.classList.add("error");
-                output.textContent = "";
-                output.innerHTML = '<span class="err">Session key required. Use 4-20 alphanumeric characters.</span>';
-                sidInput.focus();
-                return;
-            }
-            if (!SID_RE.test(sid)) {
-                sidInput.classList.add("error");
-                output.textContent = "";
-                output.innerHTML = '<span class="err">Invalid session key. Use 4-20 alphanumeric characters.</span>';
-                sidInput.focus();
-                return;
-            }
-
-            // Validate ttl if provided
-            let ttl = undefined;
-            if (ttlRaw !== "") {
-                const n = Number(ttlRaw);
-                if (!Number.isInteger(n) || n < 300 || n > 7200) {
-                    ttlInput.classList.add("error");
-                    output.textContent = "";
-                    output.innerHTML = '<span class="err">Invalid TTL. Must be an integer between 300 and 7200.</span>';
-                    ttlInput.focus();
-                    return;
-                }
-                ttl = n;
-            }
-
-            inFlight = true;
-            output.textContent = "Thinking...";
-
-            const body = { prompt, sid };
-            if (ttl !== undefined) body.ttl = ttl;
-
-            try {
-                const res = await fetch("/api/ai", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(body),
-                });
-                const text = await res.text();
-                if (res.ok) {
-                    output.textContent = text;
-                } else {
-                    output.textContent = "";
-                    output.innerHTML = `<span class="err">Error ${res.status}: ${escapeHtml(text)}</span>`;
-                }
-            } catch (e) {
-                output.textContent = "";
-                output.innerHTML = `<span class="err">Network error: ${escapeHtml(e.message)}</span>`;
-            } finally {
-                inFlight = false;
-            }
+        // ── TTL display ──
+        function formatMinutes(m) {
+            if (m < 60) return `${m} min`;
+            const h = Math.floor(m / 60);
+            const r = m % 60;
+            return r === 0 ? `${h} hr` : `${h} hr ${r} min`;
         }
 
-        function escapeHtml(str) {
-            return str
+        ttlSlider.addEventListener("input", () => {
+            ttlDisplay.textContent = formatMinutes(Number(ttlSlider.value));
+        });
+
+        // ── Screen helpers ──
+        function showChat(sid) {
+            activeSid = sid;
+            displaySid.textContent = sid;
+            localStorage.setItem(LS_SID_KEY, sid);
+            screenInit.style.display = "none";
+            screenChat.style.display = "flex";
+            output.innerHTML = '<span class="dim">Session active. Ask anything.</span>';
+            promptInput.focus();
+        }
+
+        function showInit() {
+            activeSid = null;
+            localStorage.removeItem(LS_SID_KEY);
+            screenInit.style.display = "flex";
+            screenChat.style.display = "none";
+            promptInput.value = "";
+        }
+
+        function setOutput(html) {
+            output.innerHTML = html;
+        }
+
+        function escHtml(s) {
+            return s
                 .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;")
                 .replace(/"/g, "&quot;");
         }
 
-        promptInput.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") {
-                e.preventDefault();
-                const q = promptInput.value.trim();
-                if (q) ask(q);
+        // ── Create session ──
+        btnCreate.addEventListener("click", async () => {
+            btnCreate.disabled = true;
+            btnCreate.textContent = "Creating…";
+
+            const ttlSeconds = Number(ttlSlider.value) * 60;
+
+            try {
+                const res = await fetch("/api/session/create", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ttl: ttlSeconds }),
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    alert("Failed to create session: " + (data.error || res.status));
+                    return;
+                }
+
+                showChat(data.sid);
+            } catch (e) {
+                alert("Network error: " + e.message);
+            } finally {
+                btnCreate.disabled = false;
+                btnCreate.textContent = "Create Session";
             }
         });
+
+        // ── End session ──
+        btnEnd.addEventListener("click", async () => {
+            if (!activeSid) { showInit(); return; }
+
+            // Attempt to notify backend (best effort)
+            try {
+                await fetch("/api/ai", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-session-id": activeSid,
+                    },
+                    body: JSON.stringify({ prompt: "quit" }),
+                });
+            } catch (_) { /* ignore */ }
+
+            showInit();
+        });
+
+        // ── Send prompt ──
+        async function ask() {
+            if (inFlight || !activeSid) return;
+
+            const prompt = promptInput.value.trim();
+            if (!prompt) return;
+
+            inFlight = true;
+            btnSend.disabled = true;
+            setOutput('<span class="dim">Thinking…</span>');
+
+            try {
+                const res = await fetch("/api/ai", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-session-id": activeSid,
+                    },
+                    body: JSON.stringify({ prompt }),
+                });
+
+                const text = await res.text();
+
+                // Quit response → reset UI
+                if (res.ok && text.trim() === "Session ended.") {
+                    localStorage.removeItem(LS_SID_KEY);
+                    activeSid = null;
+                    setOutput('<span class="dim">Session ended.</span>');
+                    setTimeout(showInit, 1200);
+                    return;
+                }
+
+                if (res.ok) {
+                    // 404 session-not-found lands here as non-ok; ok path is clean text
+                    output.textContent = text;
+                } else if (res.status === 404) {
+                    localStorage.removeItem(LS_SID_KEY);
+                    activeSid = null;
+                    setOutput('<span class="err">Session expired. Please create a new one.</span>');
+                    setTimeout(showInit, 2000);
+                } else {
+                    setOutput(`<span class="err">Error ${res.status}: ${escHtml(text)}</span>`);
+                }
+            } catch (e) {
+                setOutput(`<span class="err">Network error: ${escHtml(e.message)}</span>`);
+            } finally {
+                inFlight = false;
+                btnSend.disabled = false;
+                promptInput.value = "";
+                promptInput.focus();
+            }
+        }
+
+        btnSend.addEventListener("click", ask);
+
+        promptInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") { e.preventDefault(); ask(); }
+        });
+
+        // ── Restore session from localStorage ──
+        (function restoreSession() {
+            const saved = localStorage.getItem(LS_SID_KEY);
+            if (saved && /^[a-zA-Z0-9]{4,20}$/.test(saved)) {
+                showChat(saved);
+            }
+        })();
     </script>
 </body>
 
