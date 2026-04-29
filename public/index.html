@@ -5,244 +5,1191 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Secure Terminal AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,300&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap"
+        rel="stylesheet" />
 
     <style>
-        body {
+        :root {
+            --bg: #080b0f;
+            --bg2: #0d1117;
+            --bg3: #111820;
+            --border: #1e2d3d;
+            --border2: #2a3f55;
+            --accent: #00d4ff;
+            --accent2: #0088bb;
+            --accent3: #00ff9c;
+            --dim: #4a6070;
+            --text: #c8d8e4;
+            --text2: #8aa0b0;
+            --err: #ff4d6a;
+            --warn: #ffaa44;
+            --success: #00d090;
+            --mono: 'JetBrains Mono', 'Space Mono', monospace;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
             margin: 0;
-            background: #0f0f0f;
-            color: #00ff9c;
-            font-family: ui-monospace, monospace;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: 14px;
+            line-height: 1.6;
+            overflow: hidden;
+        }
+
+        /* SCANLINE OVERLAY */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0, 0, 0, 0.08) 2px,
+                    rgba(0, 0, 0, 0.08) 4px);
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        /* VIGNETTE */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at center, transparent 60%, rgba(0, 0, 0, 0.6) 100%);
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        /* GRID BACKGROUND */
+        .grid-bg {
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+        }
+
+        /* SHELL WRAPPER */
+        .shell {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 900px;
+            margin: 0 auto;
+            z-index: 1;
+        }
+
+        /* TOP BAR */
+        .topbar {
             display: flex;
             align-items: center;
-            justify-content: center;
-            min-height: 100vh;
+            gap: 12px;
+            padding: 14px 24px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(13, 17, 23, 0.9);
+            backdrop-filter: blur(8px);
+            flex-shrink: 0;
         }
 
-        .box {
-            width: 100%;
-            max-width: 720px;
-            padding: 20px;
-            border: 1px solid #00ff9c;
-            border-radius: 10px;
-            background: #111;
-        }
-
-        input,
-        button {
-            font-family: inherit;
-        }
-
-        input {
-            width: 100%;
-            padding: 10px;
-            background: #000;
-            color: #00ff9c;
-            border: 1px solid #00ff9c;
-            margin-top: 8px;
-        }
-
-        .slider {
-            margin-top: 12px;
-        }
-
-        .slider input {
-            width: 100%;
-        }
-
-        .ttl-display {
-            margin-top: 6px;
-            font-size: 14px;
-        }
-
-        .row {
+        .dots {
             display: flex;
             gap: 8px;
-            margin-top: 10px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .dot.red {
+            background: #ff5f57;
+        }
+
+        .dot.amber {
+            background: #febc2e;
+        }
+
+        .dot.green {
+            background: #28c840;
+        }
+
+        .title {
+            flex: 1;
+            text-align: center;
+            font-size: 11px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--dim);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--dim);
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--dim);
+            transition: background 0.4s, box-shadow 0.4s;
+        }
+
+        .status-dot.online {
+            background: var(--accent3);
+            box-shadow: 0 0 8px var(--accent3);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .status-dot.thinking {
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+            animation: pulse 0.6s ease-in-out infinite;
+        }
+
+        .status-dot.error {
+            background: var(--err);
+            box-shadow: 0 0 8px var(--err);
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        /* MAIN AREA */
+        .main {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* SCREENS */
+        .screen {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(8px);
+        }
+
+        /* INIT SCREEN */
+        #init-screen {
+            align-items: center;
+            justify-content: center;
+            padding: 40px 24px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .logo-ascii {
+            font-size: 11px;
+            line-height: 1.3;
+            color: var(--accent2);
+            letter-spacing: 0.05em;
+            white-space: pre;
+            text-shadow: 0 0 20px rgba(0, 136, 187, 0.4);
+        }
+
+        .logo-sub {
+            margin-top: 12px;
+            font-size: 11px;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--dim);
+        }
+
+        .init-card {
+            width: 100%;
+            max-width: 480px;
+            border: 1px solid var(--border);
+            background: var(--bg2);
+            padding: 32px;
+            position: relative;
+        }
+
+        .init-card::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: 24px;
+            right: 24px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+        }
+
+        .field {
+            margin-bottom: 24px;
+        }
+
+        .field-label {
+            display: block;
+            font-size: 10px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--dim);
+            margin-bottom: 8px;
+        }
+
+        .field-hint {
+            font-size: 11px;
+            color: var(--dim);
+            margin-top: 6px;
+            opacity: 0.7;
+        }
+
+        input[type="text"],
+        input[type="range"] {
+            font-family: var(--mono);
+        }
+
+        .text-input {
+            display: block;
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            caret-color: var(--accent);
+        }
+
+        .text-input:focus {
+            border-color: var(--accent2);
+            box-shadow: 0 0 0 1px var(--accent2), inset 0 0 12px rgba(0, 136, 187, 0.05);
+        }
+
+        .text-input::placeholder {
+            color: var(--dim);
+        }
+
+        .ttl-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .ttl-value {
+            font-size: 13px;
+            color: var(--accent);
+            min-width: 70px;
+            white-space: nowrap;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 2px;
+            background: var(--border2);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.3);
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            border: 1px solid var(--accent2);
+            color: var(--accent);
+            font-family: var(--mono);
+            font-size: 12px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s, border-color 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: var(--accent2);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover::before {
+            opacity: 0.1;
+        }
+
+        .btn:hover {
+            box-shadow: 0 0 16px rgba(0, 136, 187, 0.3);
+            border-color: var(--accent);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn:disabled::before {
+            display: none;
+        }
+
+        .init-error {
+            margin-top: 16px;
+            padding: 10px 14px;
+            border: 1px solid rgba(255, 77, 106, 0.3);
+            background: rgba(255, 77, 106, 0.05);
+            color: var(--err);
+            font-size: 12px;
+            display: none;
+        }
+
+        .init-error.visible {
+            display: block;
+        }
+
+        /* CHAT SCREEN */
+        #chat-screen {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px 24px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(13, 17, 23, 0.7);
+            flex-shrink: 0;
+        }
+
+        .session-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 12px;
+            border: 1px solid var(--border2);
+            background: var(--bg3);
+            font-size: 11px;
+            color: var(--text2);
+        }
+
+        .session-badge span {
+            color: var(--accent);
+            font-size: 11px;
+        }
+
+        .chat-meta {
+            flex: 1;
+            font-size: 11px;
+            color: var(--dim);
+        }
+
+        .btn-end {
+            padding: 6px 14px;
+            background: transparent;
+            border: 1px solid rgba(255, 77, 106, 0.3);
+            color: var(--err);
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .btn-end:hover {
+            background: rgba(255, 77, 106, 0.08);
+            border-color: var(--err);
+        }
+
+        /* OUTPUT AREA */
+        .output-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            scroll-behavior: smooth;
+        }
+
+        .output-area::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .output-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .output-area::-webkit-scrollbar-thumb {
+            background: var(--border2);
+            border-radius: 2px;
+        }
+
+        /* MESSAGES */
+        .msg {
+            margin-bottom: 24px;
+            animation: fadeSlideIn 0.2s ease;
+        }
+
+        @keyframes fadeSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .msg-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .msg-role {
+            font-size: 10px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .msg-role.user {
+            color: var(--accent3);
+        }
+
+        .msg-role.ai {
+            color: var(--accent);
+        }
+
+        .msg-role.sys {
+            color: var(--dim);
+        }
+
+        .msg-time {
+            font-size: 10px;
+            color: var(--dim);
+        }
+
+        .msg-body {
+            padding-left: 0;
+            color: var(--text);
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.75;
+        }
+
+        .msg-body.user-body {
+            color: var(--text2);
+        }
+
+        .msg-body.sys-body {
+            color: var(--dim);
+            font-style: italic;
+            font-size: 12px;
+        }
+
+        .msg-body.err-body {
+            color: var(--err);
+        }
+
+        /* THINKING INDICATOR */
+        .thinking {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--dim);
+            font-size: 12px;
+            margin-bottom: 24px;
+            animation: fadeSlideIn 0.2s ease;
+        }
+
+        .thinking-dots span {
+            display: inline-block;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: blink 1.2s ease-in-out infinite;
+        }
+
+        .thinking-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .thinking-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes blink {
+
+            0%,
+            80%,
+            100% {
+                opacity: 0.2;
+                transform: scale(1);
+            }
+
+            40% {
+                opacity: 1;
+                transform: scale(1.4);
+            }
+        }
+
+        /* INPUT BAR */
+        .input-bar {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            background: rgba(13, 17, 23, 0.9);
+            backdrop-filter: blur(8px);
+            flex-shrink: 0;
+        }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid var(--border2);
+            background: var(--bg3);
+            padding: 2px 2px 2px 14px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .input-row:focus-within {
+            border-color: var(--accent2);
+            box-shadow: 0 0 0 1px var(--accent2);
+        }
+
+        .prompt-prefix {
+            color: var(--accent3);
+            font-size: 13px;
+            user-select: none;
+            flex-shrink: 0;
+        }
+
+        .prompt-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: 13px;
+            padding: 10px 0;
+            outline: none;
+            caret-color: var(--accent);
+        }
+
+        .prompt-input::placeholder {
+            color: var(--dim);
         }
 
         .send-btn {
+            padding: 10px 18px;
+            background: var(--accent2);
+            border: none;
+            color: var(--bg);
+            font-family: var(--mono);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s, opacity 0.2s;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover {
+            background: var(--accent);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .input-hint {
+            margin-top: 8px;
+            font-size: 10px;
+            color: var(--dim);
+            letter-spacing: 0.05em;
+        }
+
+        /* CURL EXAMPLES (collapsible) */
+        .curl-panel {
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            background: var(--bg2);
+        }
+
+        .curl-toggle {
+            width: 100%;
+            padding: 10px 16px;
+            background: transparent;
+            border: none;
+            color: var(--dim);
+            font-family: var(--mono);
+            font-size: 11px;
+            text-align: left;
+            cursor: pointer;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .curl-toggle:hover {
+            color: var(--text);
+        }
+
+        .curl-toggle .chevron {
+            transition: transform 0.2s;
+        }
+
+        .curl-toggle.open .chevron {
+            transform: rotate(90deg);
+        }
+
+        .curl-body {
+            display: none;
+            padding: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .curl-body.open {
+            display: block;
+        }
+
+        .curl-block {
+            margin-bottom: 16px;
+        }
+
+        .curl-block:last-child {
+            margin-bottom: 0;
+        }
+
+        .curl-label {
+            font-size: 10px;
+            color: var(--dim);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .curl-code {
+            background: var(--bg);
+            border: 1px solid var(--border);
             padding: 10px 14px;
-            border: 1px solid #00ff9c;
-            background: transparent;
-            color: #00ff9c;
-            cursor: pointer;
-        }
-
-        button {
-            padding: 10px;
-            margin-top: 12px;
-            border: 1px solid #00ff9c;
-            background: transparent;
-            color: #00ff9c;
-            cursor: pointer;
-        }
-
-        pre {
-            margin-top: 15px;
+            font-size: 11px;
+            color: var(--accent);
             white-space: pre-wrap;
+            word-break: break-all;
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            padding: 3px 8px;
+            background: var(--border);
+            border: none;
+            color: var(--text2);
+            font-family: var(--mono);
+            font-size: 10px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .copy-btn:hover {
+            background: var(--border2);
+            color: var(--text);
+        }
+
+        .copy-btn.copied {
+            color: var(--success);
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 600px) {
+            .topbar {
+                padding: 10px 16px;
+            }
+
+            .output-area {
+                padding: 16px;
+            }
+
+            .input-bar {
+                padding: 12px 16px;
+            }
+
+            .chat-header {
+                padding: 10px 16px;
+            }
+
+            .init-card {
+                padding: 24px 20px;
+            }
+
+            .logo-ascii {
+                font-size: 9px;
+            }
         }
     </style>
 </head>
 
 <body>
 
-    <div class="box">
+    <div class="grid-bg"></div>
 
-        <h2>Secure Terminal AI</h2>
+    <div class="shell">
 
-        <!-- INIT -->
-        <div id="init">
-
-            <label>Session Key</label>
-            <input id="sidInput" placeholder="e.g. mychat123" />
-
-            <label>Session Duration</label>
-            <div class="ttl-display" id="ttlDisplay">10 min</div>
-
-            <div class="slider">
-                <input type="range" id="ttl" min="10" max="120" step="10" value="10">
+        <!-- TOP BAR -->
+        <div class="topbar">
+            <div class="dots">
+                <div class="dot red"></div>
+                <div class="dot amber"></div>
+                <div class="dot green"></div>
             </div>
-
-            <button id="createBtn">Create Session</button>
-
+            <div class="title">secure-terminal — ai@v3</div>
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">idle</span>
+            </div>
         </div>
 
-        <!-- CHAT -->
-        <div id="chat" style="display:none">
+        <!-- MAIN -->
+        <div class="main">
 
-            <div>Session: <span id="sidDisplay"></span></div>
+            <!-- INIT SCREEN -->
+            <div class="screen" id="init-screen">
 
-            <div class="row">
-                <input id="prompt" placeholder="Ask something..." />
-                <button class="send-btn" id="sendBtn">→</button>
+                <div class="logo">
+                    <div class="logo-ascii">&#32; ___ ____ __ ___ ___&#10; / __| ___| / _||_ _||_ _|&#10; \__ \ _| | (__
+                        | | | | &#10; |___/___/ \___||___||___|</div>
+                    <div class="logo-sub">Secure Terminal · AI Interface</div>
+                </div>
+
+                <div class="init-card">
+
+                    <div class="field">
+                        <label class="field-label" for="sidInput">Session ID <span
+                                style="color:var(--dim)">(optional)</span></label>
+                        <input class="text-input" id="sidInput" type="text" placeholder="Leave blank to auto-generate"
+                            maxlength="64" autocomplete="off" spellcheck="false" />
+                        <div class="field-hint">6-64 alphanumeric characters. Custom IDs let you reconnect.</div>
+                    </div>
+
+                    <div class="field">
+                        <label class="field-label">Session Duration</label>
+                        <div class="ttl-row">
+                            <div class="ttl-value" id="ttlDisplay">10 min</div>
+                            <input type="range" id="ttlSlider" min="5" max="120" step="5" value="10" />
+                        </div>
+                    </div>
+
+                    <button class="btn" id="createBtn">
+                        <span id="createBtnLabel">Initialize Session →</span>
+                    </button>
+
+                    <div class="init-error" id="initError"></div>
+
+                    <div class="curl-panel" style="margin-top:24px">
+                        <button class="curl-toggle" id="curlToggle">
+                            <span class="chevron">▶</span> curl / powershell usage
+                        </button>
+                        <div class="curl-body" id="curlBody">
+                            <div class="curl-block">
+                                <div class="curl-label">1 · Create session</div>
+                                <div class="curl-code" id="curlCreate">curl -sX POST
+                                    https://YOUR_HOST/api/session/create<button class="copy-btn"
+                                        onclick="copyCode(this)">copy</button></div>
+                            </div>
+                            <div class="curl-block">
+                                <div class="curl-label">2 · Send a prompt</div>
+                                <div class="curl-code" id="curlSend">curl -sX POST https://YOUR_HOST/api/ai \
+                                    -H 'x-session-id: &lt;sid&gt;' \
+                                    -H 'Content-Type: application/json' \
+                                    -d '{"prompt":"explain recursion"}'<button class="copy-btn"
+                                        onclick="copyCode(this)">copy</button></div>
+                            </div>
+                            <div class="curl-block">
+                                <div class="curl-label">3 · End session</div>
+                                <div class="curl-code">curl -sX POST https://YOUR_HOST/api/session/delete \
+                                    -H 'x-session-id: &lt;sid&gt;'<button class="copy-btn"
+                                        onclick="copyCode(this)">copy</button></div>
+                            </div>
+                            <div class="curl-block">
+                                <div class="curl-label">PowerShell</div>
+                                <div class="curl-code">$sid = (irm -Method POST
+                                    https://YOUR_HOST/api/session/create).sid
+                                    irm -Method POST https://YOUR_HOST/api/ai `
+                                    -Headers @{"x-session-id"=$sid;"Content-Type"="application/json"} `
+                                    -Body '{"prompt":"list files in bash"}'<button class="copy-btn"
+                                        onclick="copyCode(this)">copy</button></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
             </div>
 
-            <button id="endBtn">End Session</button>
+            <!-- CHAT SCREEN -->
+            <div class="screen hidden" id="chat-screen">
 
-            <pre id="output"></pre>
+                <div class="chat-header">
+                    <div class="session-badge">
+                        SID: <span id="sidDisplay">—</span>
+                    </div>
+                    <div class="chat-meta" id="chatMeta">Ready</div>
+                    <button class="btn-end" id="endBtn">End Session</button>
+                </div>
+
+                <div class="output-area" id="outputArea"></div>
+
+                <div class="input-bar">
+                    <div class="input-row">
+                        <div class="prompt-prefix">❯</div>
+                        <input class="prompt-input" id="promptInput" type="text" placeholder="Ask anything…"
+                            autocomplete="off" spellcheck="false" />
+                        <button class="send-btn" id="sendBtn">SEND</button>
+                    </div>
+                    <div class="input-hint">↵ Enter to send · type "quit" to end session</div>
+                </div>
+
+            </div>
 
         </div>
 
     </div>
 
     <script>
+        // ─── Elements ────────────────────────────────────────────────────────────
+        const $ = (id) => document.getElementById(id);
 
-        const sidInput = document.getElementById("sidInput");
-        const ttl = document.getElementById("ttl");
-        const ttlDisplay = document.getElementById("ttlDisplay");
-        const createBtn = document.getElementById("createBtn");
+        const sidInput = $("sidInput");
+        const ttlSlider = $("ttlSlider");
+        const ttlDisplay = $("ttlDisplay");
+        const createBtn = $("createBtn");
+        const createLabel = $("createBtnLabel");
+        const initError = $("initError");
+        const initScreen = $("init-screen");
+        const chatScreen = $("chat-screen");
+        const sidDisplay = $("sidDisplay");
+        const chatMeta = $("chatMeta");
+        const outputArea = $("outputArea");
+        const promptInput = $("promptInput");
+        const sendBtn = $("sendBtn");
+        const endBtn = $("endBtn");
+        const statusDot = $("statusDot");
+        const statusText = $("statusText");
+        const curlToggle = $("curlToggle");
+        const curlBody = $("curlBody");
 
-        const init = document.getElementById("init");
-        const chat = document.getElementById("chat");
-
-        const sidDisplay = document.getElementById("sidDisplay");
-        const prompt = document.getElementById("prompt");
-        const output = document.getElementById("output");
-
-        const sendBtn = document.getElementById("sendBtn");
-        const endBtn = document.getElementById("endBtn");
-
+        // ─── State ───────────────────────────────────────────────────────────────
         let sid = null;
+        let ttlSecs = 600; // seconds, set at session creation
+        let busy = false;
+        let msgCount = 0;
 
-        // FORMAT TIME
-        function format(m) {
-            if (m < 60) return m + " min";
-            const h = Math.floor(m / 60);
-            const r = m % 60;
+        // ─── Helpers ─────────────────────────────────────────────────────────────
+        function formatTtl(mins) {
+            if (mins < 60) return mins + " min";
+            const h = Math.floor(mins / 60);
+            const r = mins % 60;
             return r === 0 ? h + " hr" : h + " hr " + r + " min";
         }
 
-        // SLIDER FIX (snap + clean UX)
-        ttl.addEventListener("input", () => {
-            let v = Math.round(ttl.value / 10) * 10;
-            ttl.value = v;
-            ttlDisplay.textContent = format(v);
+        function setStatus(state, label) {
+            statusDot.className = "status-dot " + state;
+            statusText.textContent = label;
+        }
+
+        function showInitError(msg) {
+            initError.textContent = msg;
+            initError.classList.add("visible");
+        }
+
+        function clearInitError() {
+            initError.textContent = "";
+            initError.classList.remove("visible");
+        }
+
+        function timestamp() {
+            return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        }
+
+        function appendMsg(role, body, cls = "") {
+            const roleLabels = { user: "YOU", ai: "AI", sys: "SYS" };
+            const div = document.createElement("div");
+            div.className = "msg";
+            div.innerHTML = `
+            <div class="msg-header">
+                <span class="msg-role ${role}">${roleLabels[role] || role.toUpperCase()}</span>
+                <span class="msg-time">${timestamp()}</span>
+            </div>
+            <pre class="msg-body ${role === "user" ? "user-body" : role === "sys" ? "sys-body" : ""} ${cls}">${escapeHtml(body)}</pre>
+        `;
+            outputArea.appendChild(div);
+            outputArea.scrollTop = outputArea.scrollHeight;
+            msgCount++;
+            return div;
+        }
+
+        function appendSys(msg, cls = "") {
+            return appendMsg("sys", msg, cls);
+        }
+
+        function removeThinking() {
+            const t = outputArea.querySelector(".thinking");
+            if (t) t.remove();
+        }
+
+        function showThinking() {
+            removeThinking();
+            const div = document.createElement("div");
+            div.className = "thinking";
+            div.innerHTML = `<span class="thinking-dots"><span></span><span></span><span></span></span> Thinking…`;
+            outputArea.appendChild(div);
+            outputArea.scrollTop = outputArea.scrollHeight;
+        }
+
+        function escapeHtml(s) {
+            return s
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+        }
+
+        function copyCode(btn) {
+            const block = btn.closest(".curl-code");
+            const text = block.textContent.replace("copy", "").replace("copied!", "").trim();
+            navigator.clipboard.writeText(text).then(() => {
+                btn.textContent = "copied!";
+                btn.classList.add("copied");
+                setTimeout(() => { btn.textContent = "copy"; btn.classList.remove("copied"); }, 1500);
+            });
+        }
+        window.copyCode = copyCode;
+
+        // ─── TTL Slider ──────────────────────────────────────────────────────────
+        ttlSlider.addEventListener("input", () => {
+            const v = Math.round(ttlSlider.value / 5) * 5;
+            ttlSlider.value = v;
+            ttlDisplay.textContent = formatTtl(parseInt(v, 10));
+        });
+        ttlDisplay.textContent = formatTtl(parseInt(ttlSlider.value, 10));
+
+        // ─── Curl Panel Toggle ───────────────────────────────────────────────────
+        curlToggle.addEventListener("click", () => {
+            curlToggle.classList.toggle("open");
+            curlBody.classList.toggle("open");
         });
 
-        // INIT DISPLAY
-        ttlDisplay.textContent = format(ttl.value);
-
-        // CREATE SESSION
-        createBtn.onclick = async () => {
+        // ─── Create Session ───────────────────────────────────────────────────────
+        createBtn.addEventListener("click", async () => {
+            if (busy) return;
+            clearInitError();
 
             const customSid = sidInput.value.trim();
+            const ttlMins = parseInt(ttlSlider.value, 10);
+            ttlSecs = ttlMins * 60;
 
-            if (!customSid) {
-                output.textContent = "Enter session key";
-                return;
-            }
-
-            createBtn.textContent = "Creating...";
+            busy = true;
             createBtn.disabled = true;
+            createLabel.textContent = "Initializing…";
+            setStatus("thinking", "connecting");
 
             try {
+                const body = { ttl: ttlSecs };
+                if (customSid) body.sid = customSid;
+
                 const res = await fetch("/api/session/create", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ ttl: ttl.value * 60 })
+                    body: JSON.stringify(body),
                 });
 
                 const data = await res.json();
 
                 if (!res.ok) {
-                    output.textContent = data.error;
+                    showInitError(data.error || "Failed to create session.");
+                    setStatus("error", "error");
                     return;
                 }
 
-                // USE USER SID (important)
-                sid = customSid;
+                // CRITICAL FIX: Use the SID returned by the server, not the user input value
+                sid = data.sid;
 
                 sidDisplay.textContent = sid;
+                chatMeta.textContent = `TTL: ${formatTtl(ttlMins)} · ${ttlSecs}s`;
 
-                init.style.display = "none";
-                chat.style.display = "block";
+                initScreen.classList.add("hidden");
+                chatScreen.classList.remove("hidden");
 
-                output.textContent = "Session started.";
+                setStatus("online", "connected");
+                appendSys(`Session initialized. ID: ${sid}`);
+                promptInput.focus();
 
             } catch (e) {
-                output.textContent = e.message;
+                showInitError(e.message || "Network error.");
+                setStatus("error", "error");
+            } finally {
+                // CRITICAL FIX: always re-enable button, even on error
+                createBtn.disabled = false;
+                createLabel.textContent = "Initialize Session →";
+                busy = false;
             }
-
-            createBtn.textContent = "Create Session";
-            createBtn.disabled = false;
-        };
-
-        // SEND MESSAGE
-        async function ask() {
-            if (!sid) return;
-
-            output.textContent = "Thinking...";
-
-            const res = await fetch("/api/ai", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "x-session-id": sid
-                },
-                body: JSON.stringify({
-                    prompt: prompt.value,
-                    ttl: ttl.value * 60
-                })
-            });
-
-            const text = await res.text();
-            output.textContent = text;
-            prompt.value = "";
-        }
-
-        sendBtn.onclick = ask;
-
-        prompt.addEventListener("keydown", e => {
-            if (e.key === "Enter") ask();
         });
 
-        // END SESSION
-        endBtn.onclick = () => {
+        // ─── Send Message ─────────────────────────────────────────────────────────
+        async function sendMessage() {
+            if (!sid || busy) return;
+            const text = promptInput.value.trim();
+            if (!text) return;
+
+            promptInput.value = "";
+            sendBtn.disabled = true;
+            promptInput.disabled = true;
+            busy = true;
+            setStatus("thinking", "thinking");
+
+            appendMsg("user", text);
+
+            const isQuit = ["quit", "exit", "end", "bye", "/quit", "/exit"].includes(text.toLowerCase());
+
+            showThinking();
+
+            try {
+                const res = await fetch("/api/ai", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-session-id": sid,
+                    },
+                    body: JSON.stringify({ prompt: text }),
+                });
+
+                const body = await res.text();
+                removeThinking();
+
+                if (!res.ok) {
+                    const errBody = body.trim() || `HTTP ${res.status}`;
+                    appendMsg("ai", errBody, "err-body");
+                    setStatus("error", "error");
+                    setTimeout(() => setStatus("online", "connected"), 3000);
+                } else {
+                    appendMsg("ai", body.trim());
+                    setStatus("online", "connected");
+
+                    if (isQuit || body.trim() === "Session ended.") {
+                        resetToInit();
+                        return;
+                    }
+                }
+            } catch (e) {
+                removeThinking();
+                appendMsg("ai", `Network error: ${e.message}`, "err-body");
+                setStatus("error", "error");
+                setTimeout(() => setStatus("online", "connected"), 3000);
+            } finally {
+                busy = false;
+                sendBtn.disabled = false;
+                promptInput.disabled = false;
+                promptInput.focus();
+            }
+        }
+
+        sendBtn.addEventListener("click", sendMessage);
+        promptInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // ─── End Session ──────────────────────────────────────────────────────────
+        endBtn.addEventListener("click", async () => {
+            if (!sid) return;
+
+            // CRITICAL FIX: actually call the backend to delete the Redis session
+            try {
+                await fetch("/api/session/delete", {
+                    method: "POST",
+                    headers: { "x-session-id": sid },
+                });
+            } catch (_) {
+                // Best-effort — reset UI regardless
+            }
+
+            appendSys("Session ended by user.");
+            setTimeout(resetToInit, 600);
+        });
+
+        // ─── Reset to Init ───────────────────────────────────────────────────────
+        function resetToInit() {
             sid = null;
-            chat.style.display = "none";
-            init.style.display = "block";
-            output.textContent = "";
-        };
+            msgCount = 0;
+            outputArea.innerHTML = "";
+            chatScreen.classList.add("hidden");
+            initScreen.classList.remove("hidden");
+            sidInput.value = "";
+            clearInitError();
+            setStatus("", "idle");
+        }
 
     </script>
 

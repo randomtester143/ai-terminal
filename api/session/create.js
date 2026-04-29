@@ -1,26 +1,5 @@
+import { generateSid, validateSid, validateTtl, sessionKey } from "../lib/session.js";
 import { redis, REDIS_OK } from "../lib/redis.js";
-
-const SESSION_TTL_DEFAULT = 3600;
-const SESSION_TTL_MIN = 300;
-const SESSION_TTL_MAX = 7200;
-const SID_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
-const SID_LENGTH = 6;
-
-function generateSid() {
-    let sid = "";
-    for (let i = 0; i < SID_LENGTH; i++) {
-        sid += SID_CHARS[Math.floor(Math.random() * SID_CHARS.length)];
-    }
-    return sid;
-}
-
-function parseTtl(raw) {
-    if (raw === undefined || raw === null || raw === "") return SESSION_TTL_DEFAULT;
-    const n = Number(raw);
-    if (!Number.isInteger(n) || isNaN(n)) return null;
-    if (n < SESSION_TTL_MIN || n > SESSION_TTL_MAX) return null;
-    return n;
-}
 
 export default async function handler(req, res) {
     res.setHeader("Cache-Control", "no-store");
@@ -32,19 +11,45 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: "Method not allowed" });
     }
 
-    const rawTtl = req.body?.ttl ?? req.query?.ttl;
-    const ttl = parseTtl(rawTtl);
-    if (ttl === null) {
-        return res.status(400).json({
-            error: `Invalid ttl. Must be an integer between ${SESSION_TTL_MIN} and ${SESSION_TTL_MAX} seconds.`,
-        });
+    if (!REDIS_OK) {
+        return res.status(503).json({ error: "Storage unavailable. Check server configuration." });
     }
 
-    const sid = generateSid();
-    const key = `chat:${sid}`;
+    // Validate TTL — must be seconds
+    const rawTtl = req.body?.ttl ?? req.query?.ttl;
+    const ttlCheck = validateTtl(rawTtl);
+    if (!ttlCheck.valid) {
+        return res.status(400).json({ error: ttlCheck.error.trim() });
+    }
+    const ttl = ttlCheck.ttl;
+
+    // Accept a client-supplied SID if provided and valid, otherwise generate one
+    let sid;
+    const clientSid = req.body?.sid ?? req.query?.sid;
+    if (clientSid !== undefined && clientSid !== null && clientSid !== "") {
+        const check = validateSid(clientSid);
+        if (!check.valid) {
+            return res.status(400).json({ error: check.error.trim() });
+        }
+        sid = clientSid;
+    } else {
+        sid = generateSid();
+    }
+
+    const key = sessionKey(sid);
 
     try {
-        await redis.set(key, JSON.stringify([]), { ex: ttl });
+        // NX ensures we don't overwrite an existing session with same custom SID
+        const created = await redis.set(
+            key,
+            JSON.stringify({ history: [], ttl }),
+            { ex: ttl, nx: true }
+        );
+
+        if (created === null) {
+            // Key already existed — custom SID collision
+            return res.status(409).json({ error: "Session ID already in use. Choose a different one." });
+        }
     } catch (e) {
         console.error("session_create_failed", e?.message);
         return res.status(503).json({ error: "Failed to create session. Try again." });
