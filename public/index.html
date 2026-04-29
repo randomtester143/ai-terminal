@@ -27,50 +27,50 @@
             background: #111;
         }
 
-        h2 {
-            margin-top: 0;
+        input,
+        button {
+            font-family: inherit;
         }
 
-        label {
-            font-size: 12px;
-            color: #5a8a72;
-        }
-
-        .ttl-display {
-            margin-top: 5px;
-            font-size: 14px;
-        }
-
-        input[type="range"] {
+        input {
             width: 100%;
+            padding: 10px;
+            background: #000;
+            color: #00ff9c;
+            border: 1px solid #00ff9c;
             margin-top: 8px;
         }
 
-        .btn {
-            margin-top: 15px;
-            padding: 10px;
+        .slider {
+            margin-top: 12px;
+        }
+
+        .slider input {
+            width: 100%;
+        }
+
+        .ttl-display {
+            margin-top: 6px;
+            font-size: 14px;
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .send-btn {
+            padding: 10px 14px;
             border: 1px solid #00ff9c;
             background: transparent;
             color: #00ff9c;
             cursor: pointer;
         }
 
-        .prompt-row {
-            display: flex;
-            gap: 6px;
-            margin-top: 10px;
-        }
-
-        input[type="text"] {
-            flex: 1;
+        button {
             padding: 10px;
-            background: #000;
-            color: #00ff9c;
-            border: 1px solid #00ff9c;
-        }
-
-        .send-btn {
-            padding: 10px 14px;
+            margin-top: 12px;
             border: 1px solid #00ff9c;
             background: transparent;
             color: #00ff9c;
@@ -85,68 +85,93 @@
 </head>
 
 <body>
+
     <div class="box">
+
         <h2>Secure Terminal AI</h2>
 
-        <!-- INIT SCREEN -->
+        <!-- INIT -->
         <div id="init">
+
+            <label>Session Key</label>
+            <input id="sidInput" placeholder="e.g. mychat123" />
+
             <label>Session Duration</label>
             <div class="ttl-display" id="ttlDisplay">10 min</div>
 
-            <input type="range" id="ttl" min="10" max="120" step="10" value="10" />
+            <div class="slider">
+                <input type="range" id="ttl" min="10" max="120" step="10" value="10">
+            </div>
 
-            <button class="btn" id="create">Create Session</button>
+            <button id="createBtn">Create Session</button>
+
         </div>
 
-        <!-- CHAT SCREEN -->
-        <div id="chat" style="display:none;">
-            <div>
-                Session: <span id="sid"></span>
-            </div>
+        <!-- CHAT -->
+        <div id="chat" style="display:none">
 
-            <div class="prompt-row">
+            <div>Session: <span id="sidDisplay"></span></div>
+
+            <div class="row">
                 <input id="prompt" placeholder="Ask something..." />
-                <button class="send-btn" id="send">→</button>
+                <button class="send-btn" id="sendBtn">→</button>
             </div>
 
-            <button class="btn" id="end">End Session</button>
+            <button id="endBtn">End Session</button>
 
             <pre id="output"></pre>
+
         </div>
+
     </div>
 
     <script>
+
+        const sidInput = document.getElementById("sidInput");
         const ttl = document.getElementById("ttl");
         const ttlDisplay = document.getElementById("ttlDisplay");
-        const createBtn = document.getElementById("create");
+        const createBtn = document.getElementById("createBtn");
 
         const init = document.getElementById("init");
         const chat = document.getElementById("chat");
 
-        const sidEl = document.getElementById("sid");
+        const sidDisplay = document.getElementById("sidDisplay");
         const prompt = document.getElementById("prompt");
         const output = document.getElementById("output");
 
-        const sendBtn = document.getElementById("send");
-        const endBtn = document.getElementById("end");
+        const sendBtn = document.getElementById("sendBtn");
+        const endBtn = document.getElementById("endBtn");
 
         let sid = null;
 
+        // FORMAT TIME
         function format(m) {
             if (m < 60) return m + " min";
-            let h = Math.floor(m / 60);
-            let r = m % 60;
-            if (r === 0) return h + " hr";
-            return h + " hr " + r + " min";
+            const h = Math.floor(m / 60);
+            const r = m % 60;
+            return r === 0 ? h + " hr" : h + " hr " + r + " min";
         }
 
+        // SLIDER FIX (snap + clean UX)
         ttl.addEventListener("input", () => {
             let v = Math.round(ttl.value / 10) * 10;
             ttl.value = v;
             ttlDisplay.textContent = format(v);
         });
 
-        async function createSession() {
+        // INIT DISPLAY
+        ttlDisplay.textContent = format(ttl.value);
+
+        // CREATE SESSION
+        createBtn.onclick = async () => {
+
+            const customSid = sidInput.value.trim();
+
+            if (!customSid) {
+                output.textContent = "Enter session key";
+                return;
+            }
+
             createBtn.textContent = "Creating...";
             createBtn.disabled = true;
 
@@ -160,12 +185,14 @@
                 const data = await res.json();
 
                 if (!res.ok) {
-                    output.textContent = "Error: " + data.error;
+                    output.textContent = data.error;
                     return;
                 }
 
-                sid = data.sid;
-                sidEl.textContent = sid;
+                // USE USER SID (important)
+                sid = customSid;
+
+                sidDisplay.textContent = sid;
 
                 init.style.display = "none";
                 chat.style.display = "block";
@@ -173,13 +200,14 @@
                 output.textContent = "Session started.";
 
             } catch (e) {
-                output.textContent = "Error: " + e.message;
+                output.textContent = e.message;
             }
 
-            createBtn.disabled = false;
             createBtn.textContent = "Create Session";
-        }
+            createBtn.disabled = false;
+        };
 
+        // SEND MESSAGE
         async function ask() {
             if (!sid) return;
 
@@ -191,7 +219,10 @@
                     "Content-Type": "application/json",
                     "x-session-id": sid
                 },
-                body: JSON.stringify({ prompt: prompt.value })
+                body: JSON.stringify({
+                    prompt: prompt.value,
+                    ttl: ttl.value * 60
+                })
             });
 
             const text = await res.text();
@@ -199,21 +230,22 @@
             prompt.value = "";
         }
 
-        function endSession() {
-            sid = null;
-            chat.style.display = "none";
-            init.style.display = "block";
-            output.textContent = "";
-        }
-
-        createBtn.onclick = createSession;
         sendBtn.onclick = ask;
-        endBtn.onclick = endSession;
 
         prompt.addEventListener("keydown", e => {
             if (e.key === "Enter") ask();
         });
+
+        // END SESSION
+        endBtn.onclick = () => {
+            sid = null;
+            chat.style.display = "none";
+            init.style.display = "block";
+            output.textContent = "";
+        };
+
     </script>
+
 </body>
 
 </html>
