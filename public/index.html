@@ -33,10 +33,36 @@
             margin-top: 0;
         }
 
+        .row {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .field.grow {
+            flex: 1;
+        }
+
+        .field.fixed {
+            width: 110px;
+        }
+
+        label {
+            font-size: 11px;
+            color: #5a8a72;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
         input {
             width: 100%;
             padding: 10px;
-            margin-top: 10px;
             background: #000;
             color: #00ff9c;
             border: 1px solid #00ff9c;
@@ -51,16 +77,37 @@
             box-shadow: 0 0 8px #00ff9c;
         }
 
+        input.error {
+            border-color: #ff4444;
+            box-shadow: 0 0 6px #ff4444;
+        }
+
+        input::placeholder {
+            color: #2a5a40;
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid #1a3a2a;
+            margin: 16px 0 6px;
+        }
+
         pre {
-            margin-top: 16px;
+            margin-top: 12px;
             white-space: pre-wrap;
             word-break: break-word;
             min-height: 60px;
         }
 
+        .err {
+            color: #ff4444;
+        }
+
         .muted {
             color: #5a8a72;
             font-size: 12px;
+            margin-top: 12px;
+            margin-bottom: 0;
         }
     </style>
 </head>
@@ -68,39 +115,129 @@
 <body>
     <div class="box">
         <h2>Secure Terminal AI</h2>
-        <p>Type a prompt and press Enter:</p>
-        <input id="input" placeholder="Ask something..." autocomplete="off" autofocus />
+
+        <div class="row">
+            <div class="field grow">
+                <label for="sid">Session Key <span style="color:#ff4444">*</span></label>
+                <input id="sid" placeholder="4-20 alphanumeric chars" maxlength="20" autocomplete="off"
+                    spellcheck="false" />
+            </div>
+            <div class="field fixed">
+                <label for="ttl">TTL (seconds)</label>
+                <input id="ttl" type="number" placeholder="3600" min="300" max="7200" />
+            </div>
+        </div>
+
+        <hr class="divider" />
+
+        <div class="field" style="margin-top:4px">
+            <label for="prompt">Prompt</label>
+            <input id="prompt" placeholder="Ask something..." autocomplete="off" autofocus />
+        </div>
+
         <pre id="output"></pre>
         <p class="muted">Also accessible via curl. See <code>/api/ai</code>.</p>
     </div>
+
     <script>
-        const input = document.getElementById("input");
+        const sidInput = document.getElementById("sid");
+        const ttlInput = document.getElementById("ttl");
+        const promptInput = document.getElementById("prompt");
         const output = document.getElementById("output");
+
+        const SID_RE = /^[a-zA-Z0-9]{4,20}$/;
+        const LS_KEY = "terminal_ai_sid";
+
+        // Restore sid from localStorage
+        const saved = localStorage.getItem(LS_KEY);
+        if (saved) sidInput.value = saved;
+
+        // Persist sid to localStorage whenever it changes
+        sidInput.addEventListener("input", () => {
+            sidInput.classList.remove("error");
+            const v = sidInput.value.trim();
+            if (SID_RE.test(v)) localStorage.setItem(LS_KEY, v);
+        });
+
+        ttlInput.addEventListener("input", () => ttlInput.classList.remove("error"));
+
         let inFlight = false;
 
         async function ask(prompt) {
             if (inFlight) return;
+
+            const sid = sidInput.value.trim();
+            const ttlRaw = ttlInput.value.trim();
+
+            // Validate sid
+            if (!sid) {
+                sidInput.classList.add("error");
+                output.textContent = "";
+                output.innerHTML = '<span class="err">Session key required. Use 4-20 alphanumeric characters.</span>';
+                sidInput.focus();
+                return;
+            }
+            if (!SID_RE.test(sid)) {
+                sidInput.classList.add("error");
+                output.textContent = "";
+                output.innerHTML = '<span class="err">Invalid session key. Use 4-20 alphanumeric characters.</span>';
+                sidInput.focus();
+                return;
+            }
+
+            // Validate ttl if provided
+            let ttl = undefined;
+            if (ttlRaw !== "") {
+                const n = Number(ttlRaw);
+                if (!Number.isInteger(n) || n < 300 || n > 7200) {
+                    ttlInput.classList.add("error");
+                    output.textContent = "";
+                    output.innerHTML = '<span class="err">Invalid TTL. Must be an integer between 300 and 7200.</span>';
+                    ttlInput.focus();
+                    return;
+                }
+                ttl = n;
+            }
+
             inFlight = true;
             output.textContent = "Thinking...";
+
+            const body = { prompt, sid };
+            if (ttl !== undefined) body.ttl = ttl;
+
             try {
                 const res = await fetch("/api/ai", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ prompt })
+                    body: JSON.stringify(body),
                 });
                 const text = await res.text();
-                output.textContent = res.ok ? text : ("Error " + res.status + ": " + text);
+                if (res.ok) {
+                    output.textContent = text;
+                } else {
+                    output.textContent = "";
+                    output.innerHTML = `<span class="err">Error ${res.status}: ${escapeHtml(text)}</span>`;
+                }
             } catch (e) {
-                output.textContent = "Network error: " + e.message;
+                output.textContent = "";
+                output.innerHTML = `<span class="err">Network error: ${escapeHtml(e.message)}</span>`;
             } finally {
                 inFlight = false;
             }
         }
 
-        input.addEventListener("keydown", (e) => {
+        function escapeHtml(str) {
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+        }
+
+        promptInput.addEventListener("keydown", (e) => {
             if (e.key === "Enter") {
                 e.preventDefault();
-                const q = input.value.trim();
+                const q = promptInput.value.trim();
                 if (q) ask(q);
             }
         });
