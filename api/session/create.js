@@ -1,5 +1,5 @@
-import { generateSid, validateSid, validateTtl, sessionKey } from "../lib/session.js";
-import { redis, REDIS_OK } from "../lib/redis.js";
+import { generateSid, validateSid, validateTtl, sessionKey } from "../../lib/session.js";
+import { redis, REDIS_OK } from "../../lib/redis.js";
 
 export default async function handler(req, res) {
     res.setHeader("Cache-Control", "no-store");
@@ -15,7 +15,6 @@ export default async function handler(req, res) {
         return res.status(503).json({ error: "Storage unavailable. Check server configuration." });
     }
 
-    // Validate TTL — must be seconds
     const rawTtl = req.body?.ttl ?? req.query?.ttl;
     const ttlCheck = validateTtl(rawTtl);
     if (!ttlCheck.valid) {
@@ -23,10 +22,10 @@ export default async function handler(req, res) {
     }
     const ttl = ttlCheck.ttl;
 
-    // Accept a client-supplied SID if provided and valid, otherwise generate one
     let sid;
     const clientSid = req.body?.sid ?? req.query?.sid;
-    if (clientSid !== undefined && clientSid !== null && clientSid !== "") {
+
+    if (clientSid) {
         const check = validateSid(clientSid);
         if (!check.valid) {
             return res.status(400).json({ error: check.error.trim() });
@@ -39,7 +38,6 @@ export default async function handler(req, res) {
     const key = sessionKey(sid);
 
     try {
-        // NX ensures we don't overwrite an existing session with same custom SID
         const created = await redis.set(
             key,
             JSON.stringify({ history: [], ttl }),
@@ -47,7 +45,6 @@ export default async function handler(req, res) {
         );
 
         if (created === null) {
-            // Key already existed — custom SID collision
             return res.status(409).json({ error: "Session ID already in use. Choose a different one." });
         }
     } catch (e) {
