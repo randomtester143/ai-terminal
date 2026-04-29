@@ -1055,7 +1055,7 @@
 
             try {
                 const body = { ttl: ttlSecs };
-                if (customSid) body.sid = customSid;
+                const clientSid = req.body?.sid ?? req.query?.sid;
 
                 const res = await fetch("/api/session/create", {
                     method: "POST",
@@ -1063,7 +1063,15 @@
                     body: JSON.stringify(body),
                 });
 
-                const data = await res.json();
+                let data;
+
+                try {
+                    data = await res.json();
+                } catch {
+                    const text = await res.text();
+                    showInitError("Server error: " + text);
+                    return;
+                }
 
                 if (!res.ok) {
                     showInitError(data.error || "Failed to create session.");
