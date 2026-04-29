@@ -10,19 +10,27 @@
             margin: 0;
             background: #0f0f0f;
             color: #00ff9c;
-            font-family: monospace;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
         .box {
-            max-width: 700px;
-            padding: 20px;
+            width: 100%;
+            max-width: 720px;
+            padding: 24px;
             border: 1px solid #00ff9c;
             border-radius: 10px;
             background: #111;
+            box-shadow: 0 0 20px rgba(0, 255, 156, 0.15);
+        }
+
+        h2 {
+            margin-top: 0;
         }
 
         input {
@@ -32,12 +40,27 @@
             background: #000;
             color: #00ff9c;
             border: 1px solid #00ff9c;
+            border-radius: 4px;
             outline: none;
+            font-family: inherit;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            box-shadow: 0 0 8px #00ff9c;
         }
 
         pre {
-            margin-top: 15px;
+            margin-top: 16px;
             white-space: pre-wrap;
+            word-break: break-word;
+            min-height: 60px;
+        }
+
+        .muted {
+            color: #5a8a72;
+            font-size: 12px;
         }
     </style>
 </head>
@@ -45,22 +68,38 @@
 <body>
     <div class="box">
         <h2>Secure Terminal AI</h2>
-        <p>Type a prompt:</p>
-        <input id="input" placeholder="Ask something..." />
+        <p>Type a prompt and press Enter:</p>
+        <input id="input" placeholder="Ask something..." autocomplete="off" autofocus />
         <pre id="output"></pre>
+        <p class="muted">Also accessible via curl / PowerShell. See <code>/api/ai</code>.</p>
     </div>
-
     <script>
         const input = document.getElementById("input");
         const output = document.getElementById("output");
 
-        input.addEventListener("keypress", async (e) => {
-            if (e.key === "Enter") {
-                const q = input.value;
-                output.textContent = "Thinking...";
-                const res = await fetch("/api/ai?q=" + encodeURIComponent(q));
+        async function ask(prompt) {
+            output.textContent = "Thinking...";
+            try {
+                const res = await fetch("/api/ai", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ prompt })
+                });
                 const text = await res.text();
+                if (!res.ok) {
+                    output.textContent = "Error " + res.status + ": " + text;
+                    return;
+                }
                 output.textContent = text;
+            } catch (e) {
+                output.textContent = "Network error: " + e.message;
+            }
+        }
+
+        input.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                const q = input.value.trim();
+                if (q) ask(q);
             }
         });
     </script>
