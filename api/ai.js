@@ -59,8 +59,17 @@ Examples:
             return res.status(400).send("Invalid prompt\n");
         }
 
-        let response = await callGroq(prompt);
-        if (!response) response = await callHF(prompt);
+        const groq = await callGroq(prompt);
+        const hf = await callHF(prompt);
+
+        return res.send(
+            `--- GROQ ---
+${groq}
+
+--- HF ---
+${hf}
+`
+        );
 
         if (!response) {
             return res.status(500).send("All providers failed\n");
