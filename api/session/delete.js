@@ -1,5 +1,5 @@
-import { extractSid, validateSid, deleteSession } from "../lib/session.js";
-import { REDIS_OK } from "../lib/redis.js";
+import { extractSid, validateSid, deleteSession } from "../../lib/session.js";
+import { REDIS_OK } from "../../lib/redis.js";
 
 export default async function handler(req, res) {
     res.setHeader("Cache-Control", "no-store");
