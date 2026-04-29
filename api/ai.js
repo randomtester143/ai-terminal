@@ -3,62 +3,71 @@ import { rateLimit, getIp } from "../lib/ratelimit.js";
 import { callGroq, callHF } from "../lib/providers.js";
 import { hash } from "../lib/hash.js";
 
-export const config = {
-    api: {
-        bodyParser: { sizeLimit: "50kb" }
-    }
-};
-
 export default async function handler(req, res) {
     res.setHeader("Cache-Control", "no-store");
-
-    if (req.method !== "POST") {
-        return res.status(405).json({ error: "Method not allowed" });
-    }
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
 
     const ip = getIp(req);
 
     if (!(await rateLimit(ip))) {
-        return res.status(429).json({ error: "Rate limit exceeded" });
+        return res.status(429).send("Rate limit exceeded\n");
     }
 
-    try {
-        const { prompt, cache = false } = req.body || {};
+    // -------- GET (terminal-friendly) --------
+    if (req.method === "GET") {
+        const prompt = req.query.q;
 
-        if (!prompt || typeof prompt !== "string") {
-            return res.status(400).json({ error: "Invalid prompt" });
+        if (!prompt) {
+            return res.send(
+                `Secure Terminal AI
+
+Usage:
+  curl "https://secure-terminal.vercel.app?q=your prompt"
+
+Examples:
+  curl "https://secure-terminal.vercel.app?q=explain recursion"
+  irm "https://secure-terminal.vercel.app?q=what is ai"
+`
+            );
         }
 
         const key = hash(prompt);
 
-        // CACHE CHECK
-        if (cache) {
-            const cached = await redis.get(key);
-            if (cached) {
-                return res.json({ response: cached, cached: true });
-            }
-        }
+        // cache
+        const cached = await redis.get(key);
+        if (cached) return res.send(cached + "\n");
 
-        // PROVIDER CALL
         let response = await callGroq(prompt);
+        if (!response) response = await callHF(prompt);
 
         if (!response) {
-            response = await callHF(prompt);
+            return res.status(500).send("All providers failed\n");
         }
 
-        if (!response) {
-            return res.status(500).json({ error: "All providers failed" });
-        }
-
-        // OPTIONAL CACHE
-        if (cache && response.length < 2000) {
+        if (response.length < 2000) {
             await redis.set(key, response, { ex: 1800 });
         }
 
-        return res.json({ response });
-
-    } catch (err) {
-        console.error(err);
-        return res.status(500).json({ error: "Server error" });
+        return res.send(response + "\n");
     }
+
+    // -------- POST --------
+    if (req.method === "POST") {
+        const { prompt } = req.body || {};
+
+        if (!prompt || typeof prompt !== "string") {
+            return res.status(400).send("Invalid prompt\n");
+        }
+
+        let response = await callGroq(prompt);
+        if (!response) response = await callHF(prompt);
+
+        if (!response) {
+            return res.status(500).send("All providers failed\n");
+        }
+
+        return res.send(response + "\n");
+    }
+
+    return res.status(405).send("Method not allowed\n");
 }

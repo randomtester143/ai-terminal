@@ -1,3 +1,16 @@
 {
-    "cleanUrls": true
+    "cleanUrls": true,
+    "routes": [
+        {
+            "src": "^/$",
+            "headers": {
+                "Accept": "text/plain"
+            },
+            "dest": "/api/ai"
+        },
+        {
+            "src": "^/$",
+            "dest": "/public/index.html"
+        }
+    ]
 }

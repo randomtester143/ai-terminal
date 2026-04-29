@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Secure Terminal AI</title>
+    <style>
+        body {
+            margin: 0;
+            background: #0f0f0f;
+            color: #00ff9c;
+            font-family: monospace;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .box {
+            max-width: 700px;
+            padding: 20px;
+            border: 1px solid #00ff9c;
+            border-radius: 10px;
+            background: #111;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background: #000;
+            color: #00ff9c;
+            border: 1px solid #00ff9c;
+            outline: none;
+        }
+
+        pre {
+            margin-top: 15px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="box">
+        <h2>Secure Terminal AI</h2>
+        <p>Type a prompt:</p>
+        <input id="input" placeholder="Ask something..." />
+        <pre id="output"></pre>
+    </div>
+
+    <script>
+        const input = document.getElementById("input");
+        const output = document.getElementById("output");
+
+        input.addEventListener("keypress", async (e) => {
+            if (e.key === "Enter") {
+                const q = input.value;
+                output.textContent = "Thinking...";
+                const res = await fetch("/api/ai?q=" + encodeURIComponent(q));
+                const text = await res.text();
+                output.textContent = text;
+            }
+        });
+    </script>
+</body>
+
+</html>
