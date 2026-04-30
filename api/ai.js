@@ -74,7 +74,7 @@ export default async function handler(req, res) {
 
     const ip = getIp(req);
 
-    const parts = req.url.split("/").filter(Boolean);
+    const parts = (req.url || "").split("/").filter(Boolean);
 
     const sidFromPath = parts.length >= 4 ? parts[parts.length - 2] : null;
     const promptFromPath = parts.length >= 4 ? parts[parts.length - 1] : null;
@@ -119,13 +119,18 @@ export default async function handler(req, res) {
 
     const rawPrompt =
         promptFromPath ||
-        (req.method === "GET" ? req.query?.q : req.body?.prompt);
+        (req.method === "GET" ? req.query?.q : req.body?.prompt ?? null);
 
     if (!rawPrompt || typeof rawPrompt !== "string") {
         return res.status(400).send("Invalid prompt\n");
     }
 
-    const decoded = decodeURIComponent(rawPrompt);
+    let decoded;
+    try {
+        decoded = decodeURIComponent(rawPrompt);
+    } catch {
+        decoded = rawPrompt;
+    }
     const normalized = normalizePrompt(decoded);
 
     if (QUIT_COMMANDS.has(normalized.toLowerCase())) {
