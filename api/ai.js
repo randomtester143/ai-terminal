@@ -33,11 +33,14 @@ function normalizePrompt(p) {
 }
 
 function sanitizeOutput(text) {
-    return text.replace(/[\x00-\x1F\x7F]/g, "");
+    return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
 }
 
 function stripMarkdown(text) {
-    return text.replace(/```[\s\S]*?```/g, "").trim();
+    return text
+        .replace(/^```[a-zA-Z]*\n?/gm, "")
+        .replace(/```$/gm, "")
+        .trim();
 }
 
 function cleanResponse(text) {
@@ -175,5 +178,5 @@ export default async function handler(req, res) {
         await safeCacheSet(cacheKey, clean);
     }
 
-    return res.send(clean + "\n");
+    return res.send(clean + "\n\n");
 }
