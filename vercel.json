@@ -1,3 +1,13 @@
 {
-    "cleanUrls": true
+    "cleanUrls": true,
+    "routes": [
+        {
+            "src": "^/api/session/create/(.*)",
+            "dest": "/api/session/create"
+        },
+        {
+            "src": "^/api/ai/(.*)",
+            "dest": "/api/ai"
+        }
+    ]
 }
