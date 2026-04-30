@@ -110,14 +110,14 @@ export default async function handler(req, res) {
         return res.status(405).send("Method not allowed\n");
     }
 
-    if (req.method === "GET" && (!req.query?.q || req.query.q === "")) {
+    if (req.method === "GET" && (!req.query?.q && parts.length < 4)) {
         return res.send(USAGE_TEXT);
     }
 
     const ip = getIp(req);
     const parts = req.url.split("/").filter(Boolean);
-    const sidFromPath = parts[2];
-    const promptFromPath = parts.slice(3).join(" ");
+    const sidFromPath = parts[parts.length - 2];
+    const promptFromPath = parts[parts.length - 1];
 
     const rawSid = sidFromPath || extractSid(req);
     const sidCheck = validateSid(rawSid);
