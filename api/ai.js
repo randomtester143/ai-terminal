@@ -116,10 +116,10 @@ export default async function handler(req, res) {
 
     const ip = getIp(req);
     const parts = req.url.split("/").filter(Boolean);
-    const sidFromPath = parts[parts.length - 2];
-    const promptFromPath = parts[parts.length - 1];
+    const sidFromPath = parts.length >= 4 ? parts[parts.length - 2] : null;
+    const promptFromPath = parts.length >= 4 ? parts[parts.length - 1] : null;
 
-    const rawSid = sidFromPath || extractSid(req);
+    const rawSid = sidFromPath ?? extractSid(req);
     const sidCheck = validateSid(rawSid);
 
     if (!sidCheck.valid) {
