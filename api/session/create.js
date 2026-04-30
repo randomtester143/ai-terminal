@@ -16,10 +16,10 @@ export default async function handler(req, res) {
     }
 
     const parts = req.url.split("/").filter(Boolean);
-    const sidFromPath = parts[3];
-    const ttlFromPath = parts[4];
+    const sidFromPath = parts.length >= 5 ? parts[parts.length - 2] : null;
+    const ttlFromPath = parts.length >= 5 ? parts[parts.length - 1] : null;
 
-    const rawTtl = ttlFromPath ?? req.query?.ttl;
+    const rawTtl = ttlFromPath ?? req.query?.ttl ?? req.body?.ttl;
     const ttlCheck = validateTtl(rawTtl);
     if (!ttlCheck.valid) {
         return res.status(400).json({ error: ttlCheck.error.trim() });
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     const ttl = ttlCheck.ttl;
 
     let sid;
-    const clientSid = sidFromPath ?? req.query?.sid;
+    const clientSid = sidFromPath ?? req.query?.sid ?? req.body?.sid;
 
     if (clientSid) {
         const check = validateSid(clientSid);
