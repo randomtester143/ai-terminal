@@ -46,7 +46,6 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* ROOT SHELL — full viewport, no width cap here */
         .app {
             display: flex;
             flex-direction: column;
@@ -54,23 +53,15 @@
             width: 100%;
         }
 
-        /* TOPBAR — bleeds full viewport width, content centred inside */
+        /* TOPBAR */
         .topbar {
-            width: 100%;
-            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
             height: 52px;
             border-bottom: 1px solid var(--border);
             background: var(--bg2);
-        }
-
-        /* Shared inner centring shell for .topbar and .chat-header */
-        .bar-inner {
-            max-width: 860px;
-            margin: 0 auto;
-            padding: 0 24px;
-            height: 100%;
-            display: flex;
-            align-items: center;
+            flex-shrink: 0;
             gap: 16px;
         }
 
@@ -107,7 +98,6 @@
             width: 1px;
             height: 20px;
             background: var(--border);
-            flex-shrink: 0;
         }
 
         .topbar-route {
@@ -165,17 +155,6 @@
             font-family: var(--mono);
             font-size: 11px;
             color: var(--text3);
-        }
-
-        /* CONTENT — centred column that holds everything below the topbar */
-        .content {
-            flex: 1;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            max-width: 860px;
-            width: 100%;
-            margin: 0 auto;
         }
 
         /* MAIN */
@@ -296,6 +275,7 @@
 
         input[type="range"] {
             flex: 1;
+            appearance: none;
             -webkit-appearance: none;
             height: 3px;
             background: var(--border2);
@@ -305,6 +285,7 @@
         }
 
         input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
             -webkit-appearance: none;
             width: 14px;
             height: 14px;
@@ -403,18 +384,33 @@
             transform: rotate(90deg);
         }
 
-        /* wrapper stays simple */
-        .curl-body>div {
-            position: relative;
+        .curl-body {
+            display: none;
+            border-top: 1px solid var(--border);
+            padding: 16px;
+            flex-direction: column;
+            gap: 14px;
         }
 
-        /* FIXED: vertical scroll + proper wrapping */
+        .curl-body.open {
+            display: flex;
+        }
+
+        .curl-block-label {
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--text3);
+            margin-bottom: 5px;
+        }
+
         .curl-code {
             position: relative;
             background: var(--bg3);
             border: 1px solid var(--border);
             border-radius: 4px;
-            padding: 10px 56px 10px 12px;
+            padding: 10px 12px;
 
             font-family: var(--mono);
             font-size: 11px;
@@ -430,25 +426,6 @@
             line-height: 1.65;
         }
 
-        /* vertical scrollbar (correct direction now) */
-        .curl-code::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .curl-code::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .curl-code::-webkit-scrollbar-thumb {
-            background: var(--border2);
-            border-radius: 2px;
-        }
-
-        .curl-code::-webkit-scrollbar-thumb:hover {
-            background: var(--text3);
-        }
-
-        /* FIXED: button anchored correctly (no hacks) */
         .copy-btn {
             position: absolute;
             top: 7px;
@@ -462,7 +439,6 @@
             font-size: 10px;
             cursor: pointer;
             transition: color .1s;
-            z-index: 2;
         }
 
         .copy-btn:hover {
@@ -474,22 +450,19 @@
         }
 
         /* CHAT */
-        /* make chat full width */
         #chat-screen {
-            width: 100%;
-        }
-
-        /* remove width constraint ONLY when in chat */
-        .content.chat-active {
-            max-width: 100%;
+            flex-direction: column;
         }
 
         .chat-header {
-            width: 100%;
-            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
             height: 48px;
             border-bottom: 1px solid var(--border);
             background: var(--bg2);
+            flex-shrink: 0;
+            gap: 12px;
         }
 
         .session-pill {
@@ -752,7 +725,9 @@
         }
 
         @media(max-width:580px) {
-            .bar-inner {
+
+            .topbar,
+            .chat-header {
                 padding: 0 16px;
             }
 
@@ -770,7 +745,7 @@
                 max-width: 100%;
             }
 
-            #init-screen {
+            .init-screen {
                 padding: 24px 16px;
             }
         }
@@ -781,115 +756,106 @@
     <div class="app">
 
         <div class="topbar">
-            <div class="bar-inner">
-                <div class="topbar-brand">
-                    <div class="brand-icon">$_</div>
-                    <span class="brand-name">SecureTerm</span>
-                </div>
-                <div class="topbar-sep"></div>
-                <span class="topbar-route" id="topbarRoute">/ new session</span>
-                <div class="topbar-right">
-                    <div class="status-dot" id="statusDot"></div>
-                    <span class="status-label" id="statusText">idle</span>
-                </div>
+            <div class="topbar-brand">
+                <div class="brand-icon">$_</div>
+                <span class="brand-name">SecureTerm</span>
+            </div>
+            <div class="topbar-sep"></div>
+            <span class="topbar-route" id="topbarRoute">/ new session</span>
+            <div class="topbar-right">
+                <div class="status-dot" id="statusDot"></div>
+                <span class="status-label" id="statusText">idle</span>
             </div>
         </div>
 
-        <div class="content">
-            <div class="main">
+        <div class="main">
 
-                <!-- INIT SCREEN -->
-                <div class="screen" id="init-screen">
-                    <div class="init-header">
-                        <div class="init-title">New Session</div>
-                        <div class="init-sub">Configure and start a secure AI session</div>
+            <!-- INIT SCREEN -->
+            <div class="screen" id="init-screen">
+                <div class="init-header">
+                    <div class="init-title">New Session</div>
+                    <div class="init-sub">Configure and start a secure AI session</div>
+                </div>
+
+                <div class="init-card">
+                    <div class="field">
+                        <label class="field-label" for="sidInput">Session ID <span
+                                style="font-weight:300;text-transform:none;letter-spacing:0;color:var(--text3)">(optional)</span></label>
+                        <input class="text-input" id="sidInput" type="text" placeholder="Auto-generated if left blank"
+                            maxlength="64" autocomplete="off" spellcheck="false" />
+                        <div class="field-hint">6–64 alphanumeric characters. Custom IDs allow reconnection.</div>
                     </div>
-
-                    <div class="init-card">
-                        <div class="field">
-                            <label class="field-label" for="sidInput">Session ID <span
-                                    style="font-weight:300;text-transform:none;letter-spacing:0;color:var(--text3)">(optional)</span></label>
-                            <input class="text-input" id="sidInput" type="text"
-                                placeholder="Auto-generated if left blank" maxlength="64" autocomplete="off"
-                                spellcheck="false" />
-                            <div class="field-hint">6–64 alphanumeric characters. Custom IDs allow reconnection.</div>
+                    <div class="field">
+                        <label class="field-label">Session Duration</label>
+                        <div class="ttl-row">
+                            <span class="ttl-value" id="ttlDisplay">10 min</span>
+                            <input type="range" id="ttlSlider" min="5" max="120" step="5" value="10" />
                         </div>
-                        <div class="field">
-                            <label class="field-label">Session Duration</label>
-                            <div class="ttl-row">
-                                <span class="ttl-value" id="ttlDisplay">10 min</span>
-                                <input type="range" id="ttlSlider" min="5" max="120" step="5" value="10" />
-                            </div>
-                        </div>
-                        <button class="btn-primary" id="createBtn"><span id="createBtnLabel">Start
-                                Session</span></button>
-                        <div class="init-error" id="initError"></div>
                     </div>
+                    <button class="btn-primary" id="createBtn"><span id="createBtnLabel">Start Session</span></button>
+                    <div class="init-error" id="initError"></div>
+                </div>
 
-                    <div class="curl-panel">
-                        <button class="curl-toggle" id="curlToggle">
-                            <span class="chevron">&#9658;</span> curl &amp; PowerShell usage
-                        </button>
-                        <div class="curl-body" id="curlBody">
-                            <div>
-                                <div class="curl-block-label">1 · Create session</div>
-                                <div class="curl-code">curl -sX POST https://YOUR_HOST/api/session/create<button
-                                        class="copy-btn" onclick="copyCode(this)">copy</button></div>
-                            </div>
-                            <div>
-                                <div class="curl-block-label">2 · Send a prompt</div>
-                                <div class="curl-code">curl -sX POST https://YOUR_HOST/api/ai \
-                                    -H 'x-session-id: &lt;sid&gt;' \
-                                    -H 'Content-Type: application/json' \
-                                    -d '{"prompt":"explain recursion"}'<button class="copy-btn"
-                                        onclick="copyCode(this)">copy</button></div>
-                            </div>
-                            <div>
-                                <div class="curl-block-label">3 · End session</div>
-                                <div class="curl-code">curl -sX POST https://YOUR_HOST/api/session/delete \
-                                    -H 'x-session-id: &lt;sid&gt;'<button class="copy-btn"
-                                        onclick="copyCode(this)">copy</button></div>
-                            </div>
-                            <div>
-                                <div class="curl-block-label">PowerShell</div>
-                                <div class="curl-code">$sid = (irm -Method POST
-                                    https://YOUR_HOST/api/session/create).sid
-                                    irm -Method POST https://YOUR_HOST/api/ai `
-                                    -Headers @{"x-session-id"=$sid;"Content-Type"="application/json"} `
-                                    -Body '{"prompt":"list files in bash"}'<button class="copy-btn"
-                                        onclick="copyCode(this)">copy</button></div>
-                            </div>
+                <div class="curl-panel">
+                    <button class="curl-toggle" id="curlToggle">
+                        <span class="chevron">&#9658;</span> curl &amp; PowerShell usage
+                    </button>
+                    <div class="curl-body" id="curlBody">
+                        <div>
+                            <div class="curl-block-label">1 · Create session</div>
+                            <div class="curl-code">curl -sX POST https://YOUR_HOST/api/session/create<button
+                                    class="copy-btn" onclick="copyCode(this)">copy</button></div>
+                        </div>
+                        <div>
+                            <div class="curl-block-label">2 · Send a prompt</div>
+                            <div class="curl-code">curl -sX POST https://YOUR_HOST/api/ai \
+                                -H 'x-session-id: &lt;sid&gt;' \
+                                -H 'Content-Type: application/json' \
+                                -d '{"prompt":"explain recursion"}'<button class="copy-btn"
+                                    onclick="copyCode(this)">copy</button></div>
+                        </div>
+                        <div>
+                            <div class="curl-block-label">3 · End session</div>
+                            <div class="curl-code">curl -sX POST https://YOUR_HOST/api/session/delete \
+                                -H 'x-session-id: &lt;sid&gt;'<button class="copy-btn"
+                                    onclick="copyCode(this)">copy</button></div>
+                        </div>
+                        <div>
+                            <div class="curl-block-label">PowerShell</div>
+                            <div class="curl-code">$sid = (irm -Method POST https://YOUR_HOST/api/session/create).sid
+                                irm -Method POST https://YOUR_HOST/api/ai `
+                                -Headers @{"x-session-id"=$sid;"Content-Type"="application/json"} `
+                                -Body '{"prompt":"list files in bash"}'<button class="copy-btn"
+                                    onclick="copyCode(this)">copy</button></div>
                         </div>
                     </div>
                 </div>
-
-                <!-- CHAT SCREEN -->
-                <div class="screen hidden" id="chat-screen">
-                    <div class="chat-header">
-                        <div class="bar-inner">
-                            <div class="session-pill">
-                                <span style="color:var(--text3)">sid</span>
-                                <span class="sid-val" id="sidDisplay">—</span>
-                            </div>
-                            <div class="chat-meta" id="chatMeta"></div>
-                            <button class="btn-end" id="endBtn">End Session</button>
-                        </div>
-                    </div>
-                    <div class="output-area" id="outputArea"></div>
-                    <div class="input-bar">
-                        <div class="input-row">
-                            <span class="prompt-prefix">›</span>
-                            <input class="prompt-input" id="promptInput" type="text" placeholder="Ask anything…"
-                                autocomplete="off" spellcheck="false" />
-                            <button class="send-btn" id="sendBtn">Send</button>
-                        </div>
-                        <div class="input-hint">&#8629; Enter to send &middot; type "quit" to end session</div>
-                    </div>
-                </div>
-
             </div>
-        </div><!-- /.content -->
-    </div><!-- /.app -->
+
+            <!-- CHAT SCREEN -->
+            <div class="screen hidden" id="chat-screen">
+                <div class="chat-header">
+                    <div class="session-pill">
+                        <span style="color:var(--text3)">sid</span>
+                        <span class="sid-val" id="sidDisplay">—</span>
+                    </div>
+                    <div class="chat-meta" id="chatMeta"></div>
+                    <button class="btn-end" id="endBtn">End Session</button>
+                </div>
+                <div class="output-area" id="outputArea"></div>
+                <div class="input-bar">
+                    <div class="input-row">
+                        <span class="prompt-prefix">›</span>
+                        <input class="prompt-input" id="promptInput" type="text" placeholder="Ask anything…"
+                            autocomplete="off" spellcheck="false" />
+                        <button class="send-btn" id="sendBtn">Send</button>
+                    </div>
+                    <div class="input-hint">&#8629; Enter to send &middot; type "quit" to end session</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
 
     <script>
         const $ = id => document.getElementById(id);
