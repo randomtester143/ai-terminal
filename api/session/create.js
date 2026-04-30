@@ -15,7 +15,11 @@ export default async function handler(req, res) {
         return res.status(503).json({ error: "Storage unavailable. Check server configuration." });
     }
 
-    const rawTtl = req.body?.ttl ?? req.query?.ttl;
+    const parts = req.url.split("/").filter(Boolean);
+    const sidFromPath = parts[3];
+    const ttlFromPath = parts[4];
+
+    const rawTtl = ttlFromPath ?? req.query?.ttl;
     const ttlCheck = validateTtl(rawTtl);
     if (!ttlCheck.valid) {
         return res.status(400).json({ error: ttlCheck.error.trim() });
@@ -23,7 +27,7 @@ export default async function handler(req, res) {
     const ttl = ttlCheck.ttl;
 
     let sid;
-    const clientSid = req.body?.sid ?? req.query?.sid;
+    const clientSid = sidFromPath ?? req.query?.sid;
 
     if (clientSid) {
         const check = validateSid(clientSid);

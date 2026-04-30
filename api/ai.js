@@ -115,7 +115,11 @@ export default async function handler(req, res) {
     }
 
     const ip = getIp(req);
-    const rawSid = extractSid(req);
+    const parts = req.url.split("/").filter(Boolean);
+    const sidFromPath = parts[2];
+    const promptFromPath = parts.slice(3).join(" ");
+
+    const rawSid = sidFromPath || extractSid(req);
     const sidCheck = validateSid(rawSid);
 
     if (!sidCheck.valid) {
@@ -152,15 +156,17 @@ export default async function handler(req, res) {
 
     const { history, ttl } = session;
 
-    const rawPrompt = req.method === "GET" ? req.query?.q : req.body?.prompt;
-    if (typeof rawPrompt !== "string" || rawPrompt.trim().length === 0) {
-        return res.status(400).send("Invalid prompt\n");
-    }
+    const rawPrompt =
+        promptFromPath ||
+        (req.method === "GET" ? req.query?.q : req.body?.prompt); if (typeof rawPrompt !== "string" || rawPrompt.trim().length === 0) {
+            return res.status(400).send("Invalid prompt\n");
+        }
     if (rawPrompt.length > MAX_PROMPT_LENGTH) {
         return res.status(413).send(`Prompt too long (max ${MAX_PROMPT_LENGTH} chars)\n`);
     }
 
-    const normalized = normalizePrompt(rawPrompt);
+    const decoded = decodeURIComponent(rawPrompt || "");
+    const normalized = normalizePrompt(decoded);
 
     if (QUIT_COMMANDS.has(normalized.toLowerCase())) {
         await deleteSession(sid);
