@@ -798,34 +798,52 @@
                     <button class="curl-toggle" id="curlToggle">
                         <span class="chevron">&#9658;</span> curl &amp; PowerShell usage
                     </button>
+
                     <div class="curl-body" id="curlBody">
+
                         <div>
                             <div class="curl-block-label">1 · Create session</div>
-                            <div class="curl-code">curl -sX POST https://YOUR_HOST/api/session/create<button
-                                    class="copy-btn" onclick="copyCode(this)">copy</button></div>
+                            <div class="curl-code">
+                                curl -s -X POST https://YOUR_HOST/api/session/create/&lt;sid&gt;/&lt;ttl_minutes&gt;
+                                <button class="copy-btn" onclick="copyCode(this)">copy</button>
+                            </div>
                         </div>
+
                         <div>
                             <div class="curl-block-label">2 · Send a prompt</div>
-                            <div class="curl-code">curl -sX POST https://YOUR_HOST/api/ai \
-                                -H 'x-session-id: &lt;sid&gt;' \
-                                -H 'Content-Type: application/json' \
-                                -d '{"prompt":"explain recursion"}'<button class="copy-btn"
-                                    onclick="copyCode(this)">copy</button></div>
+                            <div class="curl-code">
+                                curl -s https://YOUR_HOST/api/ai/&lt;sid&gt;/&lt;prompt&gt;
+                                <button class="copy-btn" onclick="copyCode(this)">copy</button>
+                            </div>
                         </div>
+
                         <div>
-                            <div class="curl-block-label">3 · End session</div>
-                            <div class="curl-code">curl -sX POST https://YOUR_HOST/api/session/delete \
-                                -H 'x-session-id: &lt;sid&gt;'<button class="copy-btn"
-                                    onclick="copyCode(this)">copy</button></div>
+                            <div class="curl-block-label">3 · Continue conversation</div>
+                            <div class="curl-code">
+                                curl -s https://YOUR_HOST/api/ai/&lt;sid&gt;/&lt;next_prompt&gt;
+                                <button class="copy-btn" onclick="copyCode(this)">copy</button>
+                            </div>
                         </div>
+
+                        <div>
+                            <div class="curl-block-label">4 · End session</div>
+                            <div class="curl-code">
+                                curl -s https://YOUR_HOST/api/ai/&lt;sid&gt;/quit
+                                <button class="copy-btn" onclick="copyCode(this)">copy</button>
+                            </div>
+                        </div>
+
                         <div>
                             <div class="curl-block-label">PowerShell</div>
-                            <div class="curl-code">$sid = (irm -Method POST https://YOUR_HOST/api/session/create).sid
-                                irm -Method POST https://YOUR_HOST/api/ai `
-                                -Headers @{"x-session-id"=$sid;"Content-Type"="application/json"} `
-                                -Body '{"prompt":"list files in bash"}'<button class="copy-btn"
-                                    onclick="copyCode(this)">copy</button></div>
+                            <div class="curl-code">
+                                $sid="&lt;sid&gt;"
+                                curl -s "https://YOUR_HOST/api/session/create/$sid/&lt;ttl_minutes&gt;"
+                                curl -s "https://YOUR_HOST/api/ai/$sid/&lt;prompt&gt;"
+                                curl -s "https://YOUR_HOST/api/ai/$sid/quit"
+                                <button class="copy-btn" onclick="copyCode(this)">copy</button>
+                            </div>
                         </div>
+
                     </div>
                 </div>
             </div>
