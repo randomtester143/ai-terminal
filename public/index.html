@@ -403,30 +403,36 @@
             transform: rotate(90deg);
         }
 
-        /* 1. Target the flex item wrappers to constrain width and anchor the button */
+        /* wrapper stays simple */
         .curl-body>div {
             position: relative;
-            min-width: 0;
         }
 
-        /* 2. Remove position: relative so the button anchors to the parent div */
+        /* FIXED: vertical scroll + proper wrapping */
         .curl-code {
+            position: relative;
             background: var(--bg3);
             border: 1px solid var(--border);
             border-radius: 4px;
             padding: 10px 56px 10px 12px;
+
             font-family: var(--mono);
             font-size: 11px;
             color: var(--text2);
-            white-space: pre;
-            overflow-x: auto;
+
+            white-space: pre-wrap;
+            word-break: break-word;
+
+            max-height: 140px;
+            overflow-y: auto;
+            overflow-x: hidden;
+
             line-height: 1.65;
-            min-width: 0;
         }
 
-        /* Thin, theme-matched horizontal scrollbar */
+        /* vertical scrollbar (correct direction now) */
         .curl-code::-webkit-scrollbar {
-            height: 4px;
+            width: 4px;
         }
 
         .curl-code::-webkit-scrollbar-track {
@@ -442,13 +448,11 @@
             background: var(--text3);
         }
 
-        /* 3. Adjust absolute coordinates relative to the wrapper div */
+        /* FIXED: button anchored correctly (no hacks) */
         .copy-btn {
             position: absolute;
-            /* Label height (16px) + margin (5px) + border (1px) + original top offset (7px) */
-            top: 29px;
-            /* Border (1px) + original right offset (7px) */
-            right: 8px;
+            top: 7px;
+            right: 7px;
             padding: 2px 8px;
             background: var(--border2);
             border: none;
@@ -457,16 +461,12 @@
             font-family: var(--sans);
             font-size: 10px;
             cursor: pointer;
-            transition: color .1s, background .15s;
-            /* UX Improvement: Drop shadow masks scrolling text */
-            box-shadow: -6px 0 10px rgba(17, 18, 20, 0.95);
+            transition: color .1s;
             z-index: 2;
         }
 
         .copy-btn:hover {
             color: var(--text);
-            background: var(--text3);
-            /* Subtle background shift for tactile feedback */
         }
 
         .copy-btn.copied {
@@ -474,8 +474,14 @@
         }
 
         /* CHAT */
+        /* make chat full width */
         #chat-screen {
-            flex-direction: column;
+            width: 100%;
+        }
+
+        /* remove width constraint ONLY when in chat */
+        .content.chat-active {
+            max-width: 100%;
         }
 
         .chat-header {
