@@ -5,10 +5,12 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Secure Terminal AI — a private, session-based AI chat interface accessible via browser or curl." />
     <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline';" />
     <title>Secure Terminal AI</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
         href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap"
         rel="stylesheet" />
@@ -940,7 +942,7 @@
                     body: JSON.stringify(body)
                 });
                 const data = await res.json();
-                if (!res.ok) { showError(data.error || "Failed to create session."); setStatus("error", "error"); return; }
+                if (!res.ok && res.status !== 201) { showError(data.error || "Failed to create session."); setStatus("error", "error"); return; }
 
                 sid = data.sid;
                 sidDisplay.textContent = sid;
@@ -1010,7 +1012,8 @@
         function resetToInit() {
             sid = null; outputArea.innerHTML = "";
             chatScreen.classList.add("hidden"); initScreen.classList.remove("hidden");
-            sidInput.value = ""; clearError(); topbarRoute.textContent = "/ new session"; setStatus("", "idle");
+            sidInput.value = ""; ttlSlider.value = 10; ttlDisplay.textContent = formatTtl(10);
+            clearError(); topbarRoute.textContent = "/ new session"; setStatus("", "idle");
         }
     </script>
 </body>

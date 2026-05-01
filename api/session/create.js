@@ -12,12 +12,14 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: "Method not allowed" });
     }
 
-    if (!REDIS_OK) {
+    if (!REDIS_OK || !redis) {
         return res.status(503).json({ error: "Storage unavailable. Check server configuration." });
     }
 
     const parts = (req.url || "").split("/").filter(Boolean);
-    const sidFromPath = parts.length >= 5 ? parts[parts.length - 2] : null;
+
+    // URL structure: /api/session/create/<sid>/<ttl> → 5 parts
+    const sidFromPath = parts.length >= 5 ? decodeURIComponent(parts[parts.length - 2]) : null;
     const ttlFromPath = parts.length >= 5 ? parts[parts.length - 1] : null;
 
     const rawTtl = ttlFromPath ?? req.query?.ttl ?? req.body?.ttl;
@@ -57,5 +59,5 @@ export default async function handler(req, res) {
         return res.status(503).json({ error: "Failed to create session. Try again." });
     }
 
-    return res.status(200).json({ sid, ttl: Math.floor(ttl / 60) });
+    return res.status(201).json({ sid, ttl: Math.floor(ttl / 60) });
 }

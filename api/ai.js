@@ -3,7 +3,7 @@ import { redis, REDIS_OK } from "../lib/redis.js";
 import { rateLimit, getIp } from "../lib/ratelimit.js";
 import { generateAnswer } from "../lib/providers.js";
 import { hash } from "../lib/hash.js";
-import { detectIntent, detectLanguage, systemPromptFor } from "../lib/intent.js";
+import { detectIntent, systemPromptFor } from "../lib/intent.js";
 import {
     validateSid,
     extractSid,
@@ -51,7 +51,7 @@ function cleanResponse(text) {
 }
 
 async function safeCacheGet(key) {
-    if (!REDIS_OK || !key) return null;
+    if (!REDIS_OK || !redis || !key) return null;
     try {
         return await redis.get(key);
     } catch {
@@ -60,7 +60,7 @@ async function safeCacheGet(key) {
 }
 
 async function safeCacheSet(key, value) {
-    if (!REDIS_OK || !key || !value || value.length > CACHE_MAX_VALUE_LENGTH) return;
+    if (!REDIS_OK || !redis || !key || !value || value.length > CACHE_MAX_VALUE_LENGTH) return;
     try {
         await redis.set(key, value, { ex: CACHE_TTL_SECONDS });
     } catch { }
@@ -72,20 +72,23 @@ function clarifierForCode() {
 
 export default async function handler(req, res) {
     res.setHeader("Cache-Control", "no-store");
-    res.setHeader("Content-Type", "text/plain");
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("X-Content-Type-Options", "nosniff");
 
     if (req.method !== "GET" && req.method !== "POST") {
+        res.setHeader("Allow", "GET, POST");
         return res.status(405).send("Method not allowed\n");
     }
 
     const ip = getIp(req);
     const parts = (req.url || "").split("/").filter(Boolean);
 
+    // URL structure: /api/ai/<sid>/<prompt> → parts = ["api", "ai", sid, prompt]
     const sidFromPath = parts.length >= 4 ? parts[parts.length - 2] : null;
-    const promptFromPath = parts.length >= 4 ? parts[parts.length - 1] : null;
+    const promptFromPath = parts.length >= 4 ? decodeURIComponent(parts[parts.length - 1]) : null;
 
     if (req.method === "GET" && !promptFromPath && !req.query?.q) {
-        const protocol = req.headers["x-forwarded-proto"] || "http";
+        const protocol = req.headers["x-forwarded-proto"] || "https";
         const hostHeader = req.headers.host || "localhost";
         return res.send(getUsageText(`${protocol}://${hostHeader}`));
     }
@@ -104,13 +107,14 @@ export default async function handler(req, res) {
     try {
         [rl, sessionResult] = await Promise.all([
             rateLimit(ip),
-            loadSession(sid).catch(e => ({ error: e })),
+            loadSession(sid).catch(e => ({ error: e?.message || "Storage error" })),
         ]);
     } catch {
         return res.status(503).send("Storage unavailable\n");
     }
 
     if (!rl.allowed) {
+        res.setHeader("Retry-After", String(rl.retryAfter));
         return res.status(429).send("Rate limit exceeded\n");
     }
 
@@ -134,7 +138,8 @@ export default async function handler(req, res) {
 
     let decoded;
     try {
-        decoded = decodeURIComponent(rawPrompt);
+        // Only decode if not already decoded from path
+        decoded = promptFromPath === rawPrompt ? rawPrompt : decodeURIComponent(rawPrompt);
     } catch {
         decoded = rawPrompt;
     }
@@ -158,7 +163,7 @@ export default async function handler(req, res) {
 
     if (intent.kind === "code" && !intent.language) {
         const clarifier = clarifierForCode();
-        await saveHistory(sid, [...history, { role: "assistant", content: clarifier }], ttl);
+        await saveHistory(sid, [...history, { role: "user", content: normalized }, { role: "assistant", content: clarifier }], ttl);
         return res.send(clarifier + "\n");
     }
 
@@ -177,7 +182,13 @@ export default async function handler(req, res) {
         return res.send(cached + "\n");
     }
 
-    const result = await generateAnswer(messages, systemPromptFor(intent));
+    let result;
+    try {
+        result = await generateAnswer(messages, systemPromptFor(intent));
+    } catch (e) {
+        console.error("generate_answer_failed", e?.message);
+        return res.status(502).send("AI processing failed\n");
+    }
 
     if (!result.ok) {
         return res.status(502).send(`AI failed: ${result.error || "unknown"}\n`);
