@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+<!--[cite: 6] -->
 
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline';" />
     <title>Secure Terminal AI</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
@@ -53,7 +56,6 @@
             width: 100%;
         }
 
-        /* TOPBAR */
         .topbar {
             display: flex;
             align-items: center;
@@ -68,27 +70,27 @@
         .topbar-brand {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .brand-icon {
             width: 28px;
             height: 28px;
             border: 1.5px solid var(--border2);
-            border-radius: 5px;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: var(--accent);
             font-family: var(--mono);
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 500;
             background: var(--bg3);
         }
 
         .brand-name {
             font-family: var(--mono);
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 500;
             color: var(--text);
             letter-spacing: 0.01em;
@@ -110,12 +112,12 @@
             margin-left: auto;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
         }
 
         .status-dot {
-            width: 7px;
-            height: 7px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background: var(--text3);
             transition: background 0.3s, box-shadow 0.3s;
@@ -124,40 +126,39 @@
 
         .status-dot.online {
             background: var(--green);
-            box-shadow: 0 0 6px rgba(62, 207, 142, 0.5);
+            box-shadow: 0 0 8px rgba(62, 207, 142, 0.5);
             animation: pdot 2.5s ease-in-out infinite;
         }
 
         .status-dot.thinking {
             background: var(--accent);
-            box-shadow: 0 0 6px rgba(79, 142, 247, 0.5);
+            box-shadow: 0 0 8px rgba(79, 142, 247, 0.5);
             animation: pdot 0.8s ease-in-out infinite;
         }
 
         .status-dot.error {
             background: var(--red);
-            box-shadow: 0 0 6px rgba(242, 108, 108, 0.4);
+            box-shadow: 0 0 8px rgba(242, 108, 108, 0.4);
         }
 
         @keyframes pdot {
 
             0%,
             100% {
-                opacity: 1
+                opacity: 1;
             }
 
             50% {
-                opacity: .35
+                opacity: 0.35;
             }
         }
 
         .status-label {
             font-family: var(--mono);
-            font-size: 11px;
+            font-size: 12px;
             color: var(--text3);
         }
 
-        /* MAIN */
         .main {
             flex: 1;
             overflow: hidden;
@@ -169,21 +170,19 @@
             inset: 0;
             display: flex;
             flex-direction: column;
-            transition: opacity .2s ease, transform .2s ease;
+            transition: opacity 0.2s ease, transform 0.2s ease;
         }
 
         .screen.hidden {
             opacity: 0;
             pointer-events: none;
-            transform: translateY(6px);
+            transform: translateY(8px);
         }
 
-        /* INIT */
         #init-screen {
             justify-content: center;
             align-items: center;
             padding: 40px 24px;
-            gap: 0;
             overflow-y: auto;
         }
 
@@ -197,11 +196,11 @@
             font-size: 20px;
             font-weight: 500;
             color: var(--text);
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
 
         .init-sub {
-            font-size: 13px;
+            font-size: 14px;
             color: var(--text2);
             font-weight: 300;
         }
@@ -212,47 +211,47 @@
             background: var(--bg2);
             border: 1px solid var(--border);
             border-radius: 8px;
-            padding: 28px;
+            padding: 24px;
         }
 
         .field {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
         .field-label {
             display: block;
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 500;
-            letter-spacing: .06em;
+            letter-spacing: 0.04em;
             text-transform: uppercase;
             color: var(--text2);
             margin-bottom: 8px;
         }
 
         .field-hint {
-            font-size: 11px;
+            font-size: 12px;
             color: var(--text3);
-            margin-top: 5px;
+            margin-top: 8px;
         }
 
         .text-input {
             display: block;
             width: 100%;
-            padding: 9px 12px;
+            padding: 10px 12px;
             background: var(--bg3);
             border: 1px solid var(--border);
-            border-radius: 5px;
+            border-radius: 4px;
             color: var(--text);
             font-family: var(--mono);
-            font-size: 13px;
+            font-size: 14px;
             outline: none;
-            transition: border-color .15s, box-shadow .15s;
+            transition: border-color 0.15s, box-shadow 0.15s;
             caret-color: var(--accent);
         }
 
         .text-input:focus {
             border-color: var(--accent-dim);
-            box-shadow: 0 0 0 3px rgba(79, 142, 247, .1);
+            box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.15);
         }
 
         .text-input::placeholder {
@@ -262,12 +261,12 @@
         .ttl-row {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 16px;
         }
 
         .ttl-value {
             font-family: var(--mono);
-            font-size: 13px;
+            font-size: 14px;
             color: var(--text);
             min-width: 64px;
             flex-shrink: 0;
@@ -277,7 +276,7 @@
             flex: 1;
             appearance: none;
             -webkit-appearance: none;
-            height: 3px;
+            height: 4px;
             background: var(--border2);
             border-radius: 2px;
             outline: none;
@@ -287,53 +286,54 @@
         input[type="range"]::-webkit-slider-thumb {
             appearance: none;
             -webkit-appearance: none;
-            width: 14px;
-            height: 14px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
             background: var(--accent);
             cursor: pointer;
-            transition: transform .1s, box-shadow .1s;
+            transition: transform 0.1s, box-shadow 0.1s;
         }
 
-        input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-            box-shadow: 0 0 0 3px rgba(79, 142, 247, .2);
+        input[type="range"]::-webkit-slider-thumb:hover,
+        input[type="range"]::-webkit-slider-thumb:focus {
+            transform: scale(1.15);
+            box-shadow: 0 0 0 4px rgba(79, 142, 247, 0.2);
         }
 
         .btn-primary {
             width: 100%;
-            padding: 10px 16px;
+            padding: 12px 16px;
             background: var(--accent);
             border: none;
-            border-radius: 5px;
+            border-radius: 4px;
             color: #fff;
             font-family: var(--mono);
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 500;
             cursor: pointer;
-            transition: background .15s, box-shadow .15s;
-            margin-top: 4px;
+            transition: background 0.15s, box-shadow 0.15s;
+            margin-top: 8px;
         }
 
         .btn-primary:hover {
             background: #6aa0f8;
-            box-shadow: 0 2px 12px rgba(79, 142, 247, .25);
+            box-shadow: 0 4px 12px rgba(79, 142, 247, 0.2);
         }
 
         .btn-primary:disabled {
-            opacity: .45;
+            opacity: 0.5;
             cursor: not-allowed;
             box-shadow: none;
         }
 
         .init-error {
-            margin-top: 14px;
-            padding: 9px 12px;
-            background: rgba(242, 108, 108, .06);
-            border: 1px solid rgba(242, 108, 108, .2);
+            margin-top: 16px;
+            padding: 12px;
+            background: rgba(242, 108, 108, 0.08);
+            border: 1px solid rgba(242, 108, 108, 0.25);
             border-radius: 4px;
             color: var(--red);
-            font-size: 12px;
+            font-size: 13px;
             display: none;
         }
 
@@ -341,11 +341,10 @@
             display: block;
         }
 
-        /* CURL PANEL */
         .curl-panel {
             width: 100%;
             max-width: 440px;
-            margin-top: 14px;
+            margin-top: 16px;
             border: 1px solid var(--border);
             border-radius: 8px;
             overflow: hidden;
@@ -354,19 +353,19 @@
 
         .curl-toggle {
             width: 100%;
-            padding: 11px 16px;
+            padding: 12px 16px;
             background: transparent;
             border: none;
             color: var(--text2);
             font-family: var(--sans);
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 500;
             text-align: left;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 8px;
-            transition: color .15s;
+            transition: color 0.15s;
         }
 
         .curl-toggle:hover {
@@ -374,9 +373,9 @@
         }
 
         .chevron {
-            font-size: 9px;
+            font-size: 10px;
             color: var(--text3);
-            transition: transform .2s;
+            transition: transform 0.2s;
             display: inline-block;
         }
 
@@ -389,9 +388,8 @@
             border-top: 1px solid var(--border);
             padding: 16px;
             flex-direction: column;
-            gap: 14px;
-
-            max-height: 220px;
+            gap: 16px;
+            max-height: 240px;
             overflow-y: auto;
         }
 
@@ -400,12 +398,12 @@
         }
 
         .curl-block-label {
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 500;
-            letter-spacing: .08em;
+            letter-spacing: 0.05em;
             text-transform: uppercase;
             color: var(--text3);
-            margin-bottom: 5px;
+            margin-bottom: 8px;
         }
 
         .curl-code {
@@ -413,43 +411,40 @@
             background: var(--bg3);
             border: 1px solid var(--border);
             border-radius: 4px;
-            padding: 10px 12px;
-
+            padding: 12px;
             font-family: var(--mono);
-            font-size: 11px;
+            font-size: 12px;
             color: var(--text2);
-
             white-space: pre-wrap;
             word-break: break-word;
             overflow-x: auto;
-
-            line-height: 1.65;
+            line-height: 1.6;
         }
 
         .copy-btn {
             position: absolute;
-            top: 7px;
-            right: 7px;
-            padding: 2px 8px;
+            top: 8px;
+            right: 8px;
+            padding: 4px 8px;
             background: var(--border2);
             border: none;
-            border-radius: 3px;
+            border-radius: 4px;
             color: var(--text3);
             font-family: var(--sans);
-            font-size: 10px;
+            font-size: 11px;
             cursor: pointer;
-            transition: color .1s;
+            transition: color 0.15s, background 0.15s;
         }
 
         .copy-btn:hover {
             color: var(--text);
+            background: var(--text3);
         }
 
         .copy-btn.copied {
             color: var(--green);
         }
 
-        /* CHAT */
         #chat-screen {
             flex-direction: column;
         }
@@ -458,23 +453,23 @@
             display: flex;
             align-items: center;
             padding: 0 24px;
-            height: 48px;
+            height: 52px;
             border-bottom: 1px solid var(--border);
             background: var(--bg2);
             flex-shrink: 0;
-            gap: 12px;
+            gap: 16px;
         }
 
         .session-pill {
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding: 3px 10px;
+            gap: 8px;
+            padding: 4px 12px;
             background: var(--bg3);
             border: 1px solid var(--border);
             border-radius: 4px;
             font-family: var(--mono);
-            font-size: 11px;
+            font-size: 12px;
             color: var(--text2);
         }
 
@@ -487,27 +482,27 @@
         }
 
         .chat-meta {
-            font-size: 12px;
+            font-size: 13px;
             color: var(--text3);
             flex: 1;
         }
 
         .btn-end {
-            padding: 5px 12px;
+            padding: 6px 16px;
             background: transparent;
             border: 1px solid var(--border2);
             border-radius: 4px;
             color: var(--text2);
             font-family: var(--sans);
-            font-size: 12px;
+            font-size: 13px;
             cursor: pointer;
-            transition: border-color .15s, color .15s, background .15s;
+            transition: border-color 0.15s, color 0.15s, background 0.15s;
         }
 
         .btn-end:hover {
             border-color: var(--red);
             color: var(--red);
-            background: rgba(242, 108, 108, .05);
+            background: rgba(242, 108, 108, 0.08);
         }
 
         .output-area {
@@ -518,7 +513,7 @@
         }
 
         .output-area::-webkit-scrollbar {
-            width: 4px;
+            width: 6px;
         }
 
         .output-area::-webkit-scrollbar-track {
@@ -527,39 +522,38 @@
 
         .output-area::-webkit-scrollbar-thumb {
             background: var(--border2);
-            border-radius: 2px;
+            border-radius: 3px;
         }
 
-        /* MESSAGES */
         .msg {
-            margin-bottom: 20px;
-            animation: min .18s ease;
+            margin-bottom: 24px;
+            animation: min 0.2s ease;
         }
 
         @keyframes min {
             from {
                 opacity: 0;
-                transform: translateY(4px)
+                transform: translateY(6px);
             }
 
             to {
                 opacity: 1;
-                transform: translateY(0)
+                transform: translateY(0);
             }
         }
 
         .msg-header {
             display: flex;
             align-items: baseline;
-            gap: 10px;
-            margin-bottom: 5px;
+            gap: 12px;
+            margin-bottom: 8px;
         }
 
         .msg-role {
             font-family: var(--mono);
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 500;
-            letter-spacing: .1em;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
         }
 
@@ -576,17 +570,18 @@
         }
 
         .msg-time {
-            font-size: 10px;
+            font-size: 11px;
             color: var(--text3);
             font-family: var(--mono);
         }
 
         .msg-body {
             font-family: var(--mono);
-            font-size: 13px;
+            font-size: 14px;
             color: var(--text);
-            white-space: pre;
-            line-height: 1.75;
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.6;
         }
 
         .msg-body.user-body {
@@ -595,7 +590,7 @@
 
         .msg-body.sys-body {
             color: var(--text3);
-            font-size: 12px;
+            font-size: 13px;
             font-style: italic;
         }
 
@@ -606,29 +601,29 @@
         .thinking {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 12px;
             color: var(--text3);
-            font-size: 12px;
+            font-size: 13px;
             font-family: var(--mono);
-            margin-bottom: 20px;
-            animation: min .18s ease;
+            margin-bottom: 24px;
+            animation: min 0.2s ease;
         }
 
         .thinking-dots span {
             display: inline-block;
-            width: 4px;
-            height: 4px;
+            width: 5px;
+            height: 5px;
             border-radius: 50%;
             background: var(--accent);
             animation: blink 1.2s ease-in-out infinite;
         }
 
         .thinking-dots span:nth-child(2) {
-            animation-delay: .2s;
+            animation-delay: 0.2s;
         }
 
         .thinking-dots span:nth-child(3) {
-            animation-delay: .4s;
+            animation-delay: 0.4s;
         }
 
         @keyframes blink {
@@ -636,17 +631,16 @@
             0%,
             80%,
             100% {
-                opacity: .2
+                opacity: 0.2;
             }
 
             40% {
-                opacity: 1
+                opacity: 1;
             }
         }
 
-        /* INPUT */
         .input-bar {
-            padding: 14px 24px 18px;
+            padding: 16px 24px 24px;
             border-top: 1px solid var(--border);
             background: var(--bg2);
             flex-shrink: 0;
@@ -659,19 +653,19 @@
             border-radius: 6px;
             background: var(--bg3);
             overflow: hidden;
-            transition: border-color .15s, box-shadow .15s;
+            transition: border-color 0.15s, box-shadow 0.15s;
         }
 
         .input-row:focus-within {
             border-color: var(--accent-dim);
-            box-shadow: 0 0 0 3px rgba(79, 142, 247, .08);
+            box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.15);
         }
 
         .prompt-prefix {
-            padding: 0 10px 0 14px;
+            padding: 0 12px 0 16px;
             color: var(--text3);
             font-family: var(--mono);
-            font-size: 14px;
+            font-size: 15px;
             user-select: none;
             flex-shrink: 0;
         }
@@ -682,8 +676,8 @@
             border: none;
             color: var(--text);
             font-family: var(--mono);
-            font-size: 13px;
-            padding: 11px 0;
+            font-size: 14px;
+            padding: 14px 0;
             outline: none;
             caret-color: var(--accent);
         }
@@ -693,18 +687,18 @@
         }
 
         .send-btn {
-            padding: 0 18px;
+            padding: 0 20px;
             height: 100%;
-            min-height: 43px;
+            min-height: 48px;
             background: var(--accent);
             border: none;
             border-left: 1px solid var(--accent-dim);
             color: #fff;
             font-family: var(--mono);
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 500;
             cursor: pointer;
-            transition: background .15s;
+            transition: background 0.15s;
             flex-shrink: 0;
         }
 
@@ -713,17 +707,17 @@
         }
 
         .send-btn:disabled {
-            opacity: .45;
+            opacity: 0.5;
             cursor: not-allowed;
         }
 
         .input-hint {
-            margin-top: 7px;
-            font-size: 11px;
+            margin-top: 8px;
+            font-size: 12px;
             color: var(--text3);
         }
 
-        @media(max-width:580px) {
+        @media(max-width: 580px) {
 
             .topbar,
             .chat-header {
@@ -753,7 +747,6 @@
 
 <body>
     <div class="app">
-
         <div class="topbar">
             <div class="topbar-brand">
                 <div class="brand-icon">$_</div>
@@ -768,8 +761,6 @@
         </div>
 
         <div class="main">
-
-            <!-- INIT SCREEN -->
             <div class="screen" id="init-screen">
                 <div class="init-header">
                     <div class="init-title">New Session</div>
@@ -781,67 +772,61 @@
                         <label class="field-label" for="sidInput">Session ID <span
                                 style="font-weight:300;text-transform:none;letter-spacing:0;color:var(--text3)">(optional)</span></label>
                         <input class="text-input" id="sidInput" type="text" placeholder="Auto-generated if left blank"
-                            maxlength="64" autocomplete="off" spellcheck="false" />
+                            maxlength="64" autocomplete="off" spellcheck="false" aria-label="Session ID" />
                         <div class="field-hint">6–64 alphanumeric characters. Custom IDs allow reconnection.</div>
                     </div>
                     <div class="field">
-                        <label class="field-label">Session Duration</label>
+                        <label class="field-label" for="ttlSlider">Session Duration</label>
                         <div class="ttl-row">
                             <span class="ttl-value" id="ttlDisplay">10 min</span>
-                            <input type="range" id="ttlSlider" min="5" max="120" step="5" value="10" />
+                            <input type="range" id="ttlSlider" min="5" max="120" step="5" value="10"
+                                aria-label="Session duration slider" />
                         </div>
                     </div>
-                    <button class="btn-primary" id="createBtn"><span id="createBtnLabel">Start Session</span></button>
-                    <div class="init-error" id="initError"></div>
+                    <button class="btn-primary" id="createBtn" aria-label="Start Session"><span
+                            id="createBtnLabel">Start Session</span></button>
+                    <div class="init-error" id="initError" role="alert"></div>
                 </div>
 
                 <div class="curl-panel">
-                    <button class="curl-toggle" id="curlToggle">
+                    <button class="curl-toggle" id="curlToggle" aria-expanded="false">
                         <span class="chevron">&#9658;</span> curl &amp; PowerShell usage
                     </button>
-
                     <div class="curl-body" id="curlBody">
-
                         <div>
                             <div class="curl-block-label">1 · Create session</div>
                             <div class="curl-code">curl -s -X POST
                                 https://YOUR_HOST/api/session/create/&lt;sid&gt;/&lt;ttl_minutes&gt;<button
-                                    class="copy-btn" onclick="copyCode(this)">copy</button></div>
+                                    class="copy-btn" onclick="copyCode(this)" aria-label="Copy code">copy</button></div>
                         </div>
-
                         <div>
                             <div class="curl-block-label">2 · Send a prompt</div>
                             <div class="curl-code">curl -s https://YOUR_HOST/api/ai/&lt;sid&gt;/&lt;prompt&gt;<button
-                                    class="copy-btn" onclick="copyCode(this)">copy</button></div>
+                                    class="copy-btn" onclick="copyCode(this)" aria-label="Copy code">copy</button></div>
                         </div>
-
                         <div>
                             <div class="curl-block-label">3 · Continue conversation</div>
                             <div class="curl-code">curl -s
                                 https://YOUR_HOST/api/ai/&lt;sid&gt;/&lt;next_prompt&gt;<button class="copy-btn"
-                                    onclick="copyCode(this)">copy</button></div>
+                                    onclick="copyCode(this)" aria-label="Copy code">copy</button></div>
                         </div>
-
                         <div>
                             <div class="curl-block-label">4 · End session</div>
                             <div class="curl-code">curl -s https://YOUR_HOST/api/ai/&lt;sid&gt;/quit<button
-                                    class="copy-btn" onclick="copyCode(this)">copy</button></div>
+                                    class="copy-btn" onclick="copyCode(this)" aria-label="Copy code">copy</button></div>
                         </div>
-
                         <div>
                             <div class="curl-block-label">PowerShell</div>
                             <div class="curl-code">$sid="&lt;sid&gt;"<br>curl -s
                                 "https://YOUR_HOST/api/session/create/$sid/&lt;ttl_minutes&gt;"<br>curl -s
                                 "https://YOUR_HOST/api/ai/$sid/&lt;prompt&gt;"<br>curl -s
-                                "https://YOUR_HOST/api/ai/$sid/quit"<button class="copy-btn"
-                                    onclick="copyCode(this)">copy</button></div>
+                                "https://YOUR_HOST/api/ai/$sid/quit"<button class="copy-btn" onclick="copyCode(this)"
+                                    aria-label="Copy code">copy</button></div>
                         </div>
-
                     </div>
                 </div>
             </div>
 
-            <!-- CHAT SCREEN -->
             <div class="screen hidden" id="chat-screen">
                 <div class="chat-header">
                     <div class="session-pill">
@@ -849,20 +834,19 @@
                         <span class="sid-val" id="sidDisplay">—</span>
                     </div>
                     <div class="chat-meta" id="chatMeta"></div>
-                    <button class="btn-end" id="endBtn">End Session</button>
+                    <button class="btn-end" id="endBtn" aria-label="End session">End Session</button>
                 </div>
-                <div class="output-area" id="outputArea"></div>
+                <div class="output-area" id="outputArea" aria-live="polite"></div>
                 <div class="input-bar">
                     <div class="input-row">
                         <span class="prompt-prefix">›</span>
                         <input class="prompt-input" id="promptInput" type="text" placeholder="Ask anything…"
-                            autocomplete="off" spellcheck="false" />
-                        <button class="send-btn" id="sendBtn">Send</button>
+                            autocomplete="off" spellcheck="false" aria-label="Prompt input" />
+                        <button class="send-btn" id="sendBtn" aria-label="Send message">Send</button>
                     </div>
                     <div class="input-hint">&#8629; Enter to send &middot; type "quit" to end session</div>
                 </div>
             </div>
-
         </div>
     </div>
 
@@ -876,7 +860,7 @@
         const statusDot = $("statusDot"), statusText = $("statusText"), topbarRoute = $("topbarRoute");
         const curlToggle = $("curlToggle"), curlBody = $("curlBody");
 
-        let sid = null, ttlSecs = 600, busy = false;
+        let sid = null, busy = false;
 
         function formatTtl(m) {
             m = parseInt(m, 10);
@@ -888,16 +872,25 @@
         function showError(msg) { initError.textContent = msg; initError.classList.add("visible"); }
         function clearError() { initError.textContent = ""; initError.classList.remove("visible"); }
         function ts() { return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }); }
-        function escHtml(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+
+        function escHtml(s) {
+            return String(s)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
 
         function appendMsg(role, body, extraCls = "") {
             const labels = { user: "You", ai: "AI", sys: "System" };
             const div = document.createElement("div");
             div.className = "msg";
-            div.innerHTML = `<div class="msg-header"><span class="msg-role ${role}">${labels[role] || role}</span><span class="msg-time">${ts()}</span></div><pre class="msg-body ${role === "user" ? "user-body" : role === "sys" ? "sys-body" : ""} ${extraCls}">${escHtml(body)}</pre>`;
+            div.innerHTML = `<div class="msg-header"><span class="msg-role ${role}">${labels[role] || role}</span><span class="msg-time">${ts()}</span></div><div class="msg-body ${role === "user" ? "user-body" : role === "sys" ? "sys-body" : ""} ${extraCls}">${escHtml(body)}</div>`;
             outputArea.appendChild(div);
             outputArea.scrollTop = outputArea.scrollHeight;
         }
+
         function showThinking() {
             removeThinking();
             const div = document.createElement("div");
@@ -906,6 +899,7 @@
             outputArea.appendChild(div);
             outputArea.scrollTop = outputArea.scrollHeight;
         }
+
         function removeThinking() { outputArea.querySelector(".thinking")?.remove(); }
 
         window.copyCode = function (btn) {
@@ -923,47 +917,85 @@
         ttlDisplay.textContent = formatTtl(ttlSlider.value);
 
         curlToggle.addEventListener("click", () => {
-            curlToggle.classList.toggle("open");
+            const isOpen = curlToggle.classList.toggle("open");
             curlBody.classList.toggle("open");
+            curlToggle.setAttribute("aria-expanded", isOpen);
         });
 
         createBtn.addEventListener("click", async () => {
             if (busy) return;
             clearError(); busy = true; createBtn.disabled = true; createLabel.textContent = "Starting\u2026";
             setStatus("thinking", "connecting");
+
             const customSid = sidInput.value.trim();
-            ttlSecs = parseInt(ttlSlider.value, 10) * 60;
-            const body = { ttl: ttlSecs };
+            const ttlMins = parseInt(ttlSlider.value, 10);
+
+            const body = { ttl: ttlMins };
             if (customSid) body.sid = customSid;
+
             try {
-                const res = await fetch("/api/session/create", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+                const res = await fetch("/api/session/create", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body)
+                });
                 const data = await res.json();
                 if (!res.ok) { showError(data.error || "Failed to create session."); setStatus("error", "error"); return; }
+
                 sid = data.sid;
                 sidDisplay.textContent = sid;
-                chatMeta.textContent = "TTL \u00b7 " + formatTtl(parseInt(ttlSlider.value, 10));
+                chatMeta.textContent = "TTL \u00b7 " + formatTtl(ttlMins);
                 topbarRoute.textContent = "/ session";
-                initScreen.classList.add("hidden"); chatScreen.classList.remove("hidden");
+
+                initScreen.classList.add("hidden");
+                chatScreen.classList.remove("hidden");
                 setStatus("online", "connected");
                 appendMsg("sys", "Session started. ID: " + sid);
                 promptInput.focus();
-            } catch (e) { showError(e.message || "Network error."); setStatus("error", "error"); }
-            finally { createBtn.disabled = false; createLabel.textContent = "Start Session"; busy = false; }
+            } catch (e) {
+                showError("Network error. Please try again.");
+                setStatus("error", "error");
+            } finally {
+                createBtn.disabled = false;
+                createLabel.textContent = "Start Session";
+                busy = false;
+            }
         });
 
         async function sendMessage() {
             if (!sid || busy) return;
             const text = promptInput.value.trim();
             if (!text) return;
+
             promptInput.value = ""; busy = true; sendBtn.disabled = true; promptInput.disabled = true;
             setStatus("thinking", "thinking"); appendMsg("user", text); showThinking();
+
             try {
-                const res = await fetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json", "x-session-id": sid }, body: JSON.stringify({ prompt: text }) });
-                const body = await res.text(); removeThinking();
-                if (!res.ok) { appendMsg("ai", body.trim() || "HTTP " + res.status, "err-body"); setStatus("error", "error"); setTimeout(() => setStatus("online", "connected"), 3000); }
-                else { appendMsg("ai", body.trim()); setStatus("online", "connected"); if (body.trim() === "Session ended.") { resetToInit(); return; } }
-            } catch (e) { removeThinking(); appendMsg("ai", "Network error: " + e.message, "err-body"); setStatus("error", "error"); setTimeout(() => setStatus("online", "connected"), 3000); }
-            finally { busy = false; sendBtn.disabled = false; promptInput.disabled = false; promptInput.focus(); }
+                const res = await fetch("/api/ai", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "x-session-id": sid },
+                    body: JSON.stringify({ prompt: text })
+                });
+                const bodyText = await res.text();
+                removeThinking();
+
+                if (!res.ok) {
+                    appendMsg("ai", bodyText.trim() || "HTTP Error " + res.status, "err-body");
+                    setStatus("error", "error");
+                    setTimeout(() => setStatus("online", "connected"), 3000);
+                } else {
+                    appendMsg("ai", bodyText.trim());
+                    setStatus("online", "connected");
+                    if (bodyText.trim() === "Session ended.") { resetToInit(); return; }
+                }
+            } catch (e) {
+                removeThinking();
+                appendMsg("ai", "Network error. Please check your connection.", "err-body");
+                setStatus("error", "error");
+                setTimeout(() => setStatus("online", "connected"), 3000);
+            } finally {
+                busy = false; sendBtn.disabled = false; promptInput.disabled = false; promptInput.focus();
+            }
         }
         sendBtn.addEventListener("click", sendMessage);
         promptInput.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } });

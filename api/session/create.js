@@ -1,3 +1,4 @@
+//[cite: 16]
 import { generateSid, validateSid, validateTtl, sessionKey } from "../../lib/session.js";
 import { redis, REDIS_OK } from "../../lib/redis.js";
 
@@ -6,8 +7,8 @@ export default async function handler(req, res) {
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.setHeader("X-Content-Type-Options", "nosniff");
 
-    if (req.method !== "POST") {
-        res.setHeader("Allow", "POST");
+    if (req.method !== "POST" && req.method !== "GET") {
+        res.setHeader("Allow", "POST, GET");
         return res.status(405).json({ error: "Method not allowed" });
     }
 
@@ -15,7 +16,7 @@ export default async function handler(req, res) {
         return res.status(503).json({ error: "Storage unavailable. Check server configuration." });
     }
 
-    const parts = req.url.split("/").filter(Boolean);
+    const parts = (req.url || "").split("/").filter(Boolean);
     const sidFromPath = parts.length >= 5 ? parts[parts.length - 2] : null;
     const ttlFromPath = parts.length >= 5 ? parts[parts.length - 1] : null;
 
@@ -56,5 +57,5 @@ export default async function handler(req, res) {
         return res.status(503).json({ error: "Failed to create session. Try again." });
     }
 
-    return res.status(200).json({ sid, ttl });
+    return res.status(200).json({ sid, ttl: Math.floor(ttl / 60) });
 }

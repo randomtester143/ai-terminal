@@ -1,3 +1,4 @@
+//[cite: 14]
 import { redis, REDIS_OK } from "../lib/redis.js";
 import { rateLimit, getIp } from "../lib/ratelimit.js";
 import { generateAnswer } from "../lib/providers.js";
@@ -16,17 +17,19 @@ const CACHE_TTL_SECONDS = 1800;
 const CACHE_MAX_VALUE_LENGTH = 4000;
 const QUIT_COMMANDS = new Set(["quit", "exit", "end", "bye", "/quit", "/exit"]);
 
-const USAGE_TEXT = [
-    "Secure Terminal AI",
-    "",
-    "Quick start:",
-    "  1. Create a session:",
-    "     curl -X POST $HOST/api/session/create",
-    "",
-    "  2. Chat:",
-    "     curl $HOST/api/ai/<sid>/<prompt>",
-    "",
-].join("\n");
+function getUsageText(host) {
+    return [
+        "Secure Terminal AI",
+        "",
+        "Quick start:",
+        "  1. Create a session:",
+        `     curl -X POST ${host}/api/session/create`,
+        "",
+        "  2. Chat:",
+        `     curl ${host}/api/ai/<sid>/<prompt>`,
+        "",
+    ].join("\n");
+}
 
 function normalizePrompt(p) {
     return p.replace(/\r\n/g, "\n").replace(/[ \t]+\n/g, "\n").trim();
@@ -48,7 +51,7 @@ function cleanResponse(text) {
 }
 
 async function safeCacheGet(key) {
-    if (!REDIS_OK) return null;
+    if (!REDIS_OK || !key) return null;
     try {
         return await redis.get(key);
     } catch {
@@ -57,7 +60,7 @@ async function safeCacheGet(key) {
 }
 
 async function safeCacheSet(key, value) {
-    if (!REDIS_OK) return;
+    if (!REDIS_OK || !key || !value || value.length > CACHE_MAX_VALUE_LENGTH) return;
     try {
         await redis.set(key, value, { ex: CACHE_TTL_SECONDS });
     } catch { }
@@ -76,14 +79,15 @@ export default async function handler(req, res) {
     }
 
     const ip = getIp(req);
-
     const parts = (req.url || "").split("/").filter(Boolean);
 
     const sidFromPath = parts.length >= 4 ? parts[parts.length - 2] : null;
     const promptFromPath = parts.length >= 4 ? parts[parts.length - 1] : null;
 
     if (req.method === "GET" && !promptFromPath && !req.query?.q) {
-        return res.send(USAGE_TEXT);
+        const protocol = req.headers["x-forwarded-proto"] || "http";
+        const hostHeader = req.headers.host || "localhost";
+        return res.send(getUsageText(`${protocol}://${hostHeader}`));
     }
 
     const rawSid = sidFromPath ?? extractSid(req);
@@ -125,7 +129,7 @@ export default async function handler(req, res) {
         (req.method === "GET" ? req.query?.q : req.body?.prompt ?? null);
 
     if (!rawPrompt || typeof rawPrompt !== "string") {
-        return res.status(400).send("Invalid prompt\n");
+        return res.status(400).send("Invalid prompt format\n");
     }
 
     let decoded;
@@ -134,11 +138,20 @@ export default async function handler(req, res) {
     } catch {
         decoded = rawPrompt;
     }
+
     const normalized = normalizePrompt(decoded);
+
+    if (normalized.length === 0) {
+        return res.status(400).send("Prompt cannot be empty\n");
+    }
+
+    if (normalized.length > MAX_PROMPT_LENGTH) {
+        return res.status(413).send(`Prompt too long. Limit is ${MAX_PROMPT_LENGTH} characters.\n`);
+    }
 
     if (QUIT_COMMANDS.has(normalized.toLowerCase())) {
         await deleteSession(sid);
-        return res.send("Session ended\n");
+        return res.send("Session ended.\n");
     }
 
     const intent = detectIntent(normalized);
@@ -167,7 +180,7 @@ export default async function handler(req, res) {
     const result = await generateAnswer(messages, systemPromptFor(intent));
 
     if (!result.ok) {
-        return res.status(502).send("AI failed\n");
+        return res.status(502).send(`AI failed: ${result.error || "unknown"}\n`);
     }
 
     const clean = cleanResponse(result.text);
